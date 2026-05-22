@@ -1,0 +1,8 @@
+# Internal data cache
+9-data/
+# OS files
+.DS_Store
+Thumbs.db
+# Temp files
+*.tmp
+*.log

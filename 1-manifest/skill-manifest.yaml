@@ -1,0 +1,134 @@
+# Skill元数据文件
+# 定义Skill的唯一标识、版本、能力、依赖和适配场景
+
+skill:
+  id: "ManualGen"
+  name: "ManualGen 智能业务分析与操作手册生成专家"
+  version: "5.1.0"
+  author: "songzhou"
+  created_at: "2026-04-29"
+  updated_at: "2026-05-22"
+
+  # Skill分类与标签
+  category: "documentation"
+  tags:
+    - "manualgen"
+    - "documentation"
+    - "user-manual"
+    - "business-analysis"
+    - "workflow-documentation"
+    - "smart-conflict-resolution"     # 新增：智能冲突解决
+    - "interactive-guidance"           # 新增：交互式引导
+    - "incremental-update"            # 新增：增量更新
+    - "version-control"              # 新增：版本控制
+    - "harness-engineering"
+    - "state-machine"
+    - "checkpoint-system"
+    - "batch-analysis"
+    - "phased-disclosure"
+    - "verification-chain"
+
+  # 能力声明
+  capabilities:
+    - "深入理解业务逻辑和流程"
+    - "生成完整的用户操作手册"
+    - "分析业务流程和依赖关系"
+    - "增量更新和版本管理"
+    - "文档质量检查与审核"
+    - "智能冲突检测与解决"           # 增强
+    - "交互式引导与状态反馈"         # 新增
+    - "标准化探索报告生成"           # 新增
+    - "跨Session续跑（接力棒持久化）"
+    - "强制检查点验证"
+    - "阶段跳跃阻断"
+    - "状态机驱动"
+    - "产物契约管理"
+    - "防遗忘自检"
+    - "分批分析与逐步累加"
+    - "模块级模板分级选择"
+    - "防跳过验证链"
+    - "跨模块闭环完整性验证"
+
+  # 适配场景
+  scenarios:
+    - "需要为系统生成用户操作手册"
+    - "需要理解和分析业务流程"
+    - "需要更新或完善现有文档"
+    - "需要进行业务分析和流程梳理"
+
+  # 语义激活规则
+  activation_rules:
+    - type: "keyword"
+      keywords:
+        - "写个手册"
+        - "生成文档"
+        - "分析业务流程"
+        - "用户手册"
+        - "操作手册"
+        - "业务分析"
+        - "流程梳理"
+        - "完善文档"
+        - "更新文档"
+        - "业务流程"
+        - "功能关系"
+    - type: "intent"
+      patterns:
+        - "帮我.*手册"
+        - "需要.*操作手册"
+        - "分析.*业务流程"
+        - "梳理.*流程"
+
+  # 依赖项
+  dependencies:
+    required: []
+    optional:
+      - "git-integration"
+
+  # 权限申请
+  permissions:
+    - "读取项目代码文件"
+    - "写入文档目录"
+    - "读取Git提交历史"
+
+  # 输出文件说明
+  output_files:
+    runtime_data:
+      root: ".agent/harness"
+      description: "运行时期产物（接力棒/分析/模块文档/审核报告），对话生命周期内使用"
+      subdirs:
+        - "_modules/"
+    archived_docs:
+      root: "docs/manualgen"
+      description: "归档文档（正式发布的用户手册），建议提交到Git仓库"
+      subdirs:
+        - "user-manual/"
+        - "technical/"
+        - "api/"
+        - "workflow/"
+    internal_data:
+      root: ".trae/skills/ManualGen/9-data"
+      description: "Skill内部数据（知识库/缓存），建议加入.gitignore"
+      subdirs:
+        - "cache/"
+        - "history/"
+
+  # 兼容性
+  compatibility:
+    min_platform_version: "1.0.0"
+    supported_languages:
+      - "python"
+      - "javascript"
+      - "typescript"
+      - "java"
+      - "go"
+    supported_frameworks:
+      backend:
+        - "spring-boot"
+        - "express"
+        - "fastapi"
+        - "django"
+        - "flask"
+        - "nestjs"
+      frontend:
+        - "vue3"
+        - "react18"
