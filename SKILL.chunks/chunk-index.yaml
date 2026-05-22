@@ -1,0 +1,23 @@
+# SKILL.md 分块索引 — 按需加载
+
+| ID | 文件 | 大小目标 | 说明 | 加载策略 |
+|----|------|----------|------|----------|
+| 01 | chunk-01-overview.md | ~2KB | 状态机自动驱动+阶段概述 | always（无条件） |
+| 02 | chunk-02-explore-extract.md | ~4KB | EXPLORE + EXTRACT 阶段 | 仅EXTRACT阶段 |
+| 03 | chunk-03-analyze-gap.md | ~4KB | ANALYZE + GAP 阶段 | 仅ANALYZE阶段 |
+| 04 | chunk-04-resolve-write.md | ~4KB | RESOLVE + WRITE + INTEGRATE | 进入RESOLVE/WRITE时 |
+| 05 | chunk-05-audit-judge.md | ~3KB | AUDIT + JUDGE | 进入AUDIT时 |
+| 06 | chunk-06-privacy-security.md | ~2KB | 隐私保护+安全规则 | always（无条件） |
+| 07 | templates/flowchart-spec.md | ~3KB | 流程图规范（三种类型+审核标准） | 进入WRITE/REFINE时 |
+
+## 加载规则
+
+| 场景 | 加载的chunk |
+|------|-------------|
+| 初始化/状态机引导 | 01, 06 |
+| 执行 EXPLORE/EXTRACT | 01, 06, 02 |
+| 执行 ANALYZE/GAP | 01, 06, 03 |
+| 执行 RESOLVE/WRITE | 01, 06, 04 |
+| 执行 REFINE/REFERENCE_CHECK | 01, 06, 04(部分), 07 |
+| 执行 INTEGRATE | 01, 06, 04(整合部分), 07 |
+| 执行 AUDIT/TODO_RESOLVE/JUDGE | 01, 06, 05 |
