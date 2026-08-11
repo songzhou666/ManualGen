@@ -79,11 +79,11 @@
 |------|-------------------|
 | START | baton + 6层目录 + graph目录 都创建 |
 | L0_SKELETON | L0_skeleton.json 中 modules≥1 且 roles≥1 且 data_creation_chain 有 |
-| L1_MODULE | `L1_INDEX.json` 记录的总批数全部完成 + 每个 MODULE 都有 module_id |
-| L2_REGION | 每个 PAGE 至少 3 个 REGION（常见结构）全部落盘 |
-| L3_FUNCTION | ≥90% FUNCTION 带 trigger_element + OPERATES_ON 三元组 |
-| L4_OPERATION | 每个 FN ≥5 个 STEP + next_steps 完整 |
-| L5_DETAIL | 字段覆盖率≥80% + 权限矩阵覆盖≥70%（ROLE×FUNCTION） |
+| L1_MODULE | `L1_INDEX.json` 记录的总批数全部完成（`batches_done==batches_total`）+ 每个 MODULE 都有 module_id |
+| L2_REGION | **全部页面** 每个 PAGE 至少 3 个 REGION（常见结构）全部落盘 + 批数完成率100% |
+| L3_FUNCTION | **全部区域** ≥90% FUNCTION 带 trigger_element + OPERATES_ON 三元组 + 批数完成率100% |
+| L4_OPERATION | **全部** FN ≥5 个 STEP + next_steps 完整 + 批数完成率100% |
+| L5_DETAIL | **全部实体**字段覆盖率≥80% + 权限矩阵覆盖≥70%（全部 ROLE×FUNCTION） |
 | GRAPH_BUILD | 6 个 JSON 都存在；nodes ≥ MODULE+PAGE+FN 总和；cross_verified_pct ≥50% |
 | GAP_ANALYSIS | `_gap_analysis.md` P0/P1/P2/P3 四级完整；回灌决策段已写 |
 | AUTO_REVIEW | 证据不足/低置信/蛇 incomplete/权限缺/字段缺 4 类节点 100% 经过至少 1 条规则 |
@@ -91,7 +91,7 @@
 | WRITE | 模块文档数 = MODULE 数；每模块 ≥4KB 且 6 件套齐全（agent04 自检） |
 | REFINE | 每模块 fail 项 ≤3 或已自动修复 |
 | REFERENCE_CHECK | 术语一致率 & 引用有效率 ≥95% |
-| INTEGRATE | 主手册 + 附录 B~E 都产出；主手册不含 _modules 外链 |
+| INTEGRATE | 主手册 + 附录 B~F 都产出；主手册不含 _modules 外链；core_priority 模式附录F未覆盖清单与 skipped_modules 一致 |
 | AUDIT | 10 维自评 ≥60 分（其中新增 2 个图谱维度合计≥12/20） |
 | TODO_RESOLVE | P0 TODO 100% RESOLVED 或已给出 BLOCKER 说明 |
 | JUDGE | ≥70% 模块盲审 PASS；不合格但重试 ≤2 已返回 WRITE；≥3 已 DONE+⚠️ |
@@ -137,6 +137,6 @@ Step 11: 下一批 / 下一阶段
 
 ---
 
-*协议版本: 6.1.0-progress*
-*所属Skill: ManualGen v6.1.0*
+*协议版本: 6.2.0-progress*
+*所属Skill: ManualGen v6.2.0*
 *最后更新: 2026-08-11*

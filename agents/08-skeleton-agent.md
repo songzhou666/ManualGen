@@ -81,7 +81,7 @@ async function run_layer(layer_def) {
 | L2 | 页面（PAGE） | 2~3 页一批（按模块组批，不跨模块） | 每批多个 `L2_regions/PAGE_xxx_xx.json` |
 | L3 | 区域（REGION） | 每批 ≤6 区域（按模块组批） | 每批一个 `L3_functions/REG_xxx_{区域名}.json`（含该 REGION 的所有 FUNCTION） |
 | L4 | FUNCTION 分组 | 每批 ≤4 个 FUNCTION（按同-REGION/同-ENTITY 打包，与 baton `functions_per_batch` 一致） | 每批多个 `L4_operations/FN_xxx_xx.json` |
-| L5 | ENTITY / ROLE / ELEMENT / VALIDATION / AGGREGATE 5类，各类独立分批 | ENTITY 类 1个核心实体/批；ROLE 类所有 role 一批；ELEMENT 按模块一批；VALIDATION 每 FN 组批；AGGREGATE 整批 | 每批一个对应 `L5_details/<CATEGORY>/xxx.json` |
+| L5 | ENTITY / ROLE / ELEMENT / VALIDATION / AGGREGATE 5类，各类独立分批 | ENTITY 类 1个实体/批（全部实体全覆盖）；ROLE 类所有 role 一批；ELEMENT 按模块一批；VALIDATION 每 FN 组批；AGGREGATE 整批 | 每批一个对应 `L5_details/<CATEGORY>/xxx.json` |
 
 ### 关键：批间上下文隔离
 - **只加载当前批要用到的源码/页面/API**，其它一概不读
@@ -128,5 +128,5 @@ L5 跑完 & 质量门通过 → Master 自动进入 GRAPH_BUILD（调度 GraphBu
 
 ---
 
-**版本**: 6.1.0-agent08
+**版本**: 6.2.0-agent08
 **最后更新**: 2026-08-11

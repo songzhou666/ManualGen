@@ -3,6 +3,7 @@
 > **文件位置**：`.agent/harness/_baton.json`（自动创建，目录不存在时自动建）
 > **参考设计**：skill-medic 的单点写 + 断点续跑 + 批进度追踪
 > **变更点**：v5 用 Markdown 表格接力棒（人类可读但机器难解析），v6 统一为 JSON（结构化工期管理）
+> **v6.2 全量覆盖铁律**：默认 `meta.work_mode="full"`，各层 `*_batches_total` 在进入该层时按父层节点数推导（如 L2_total = ceil(页面总数/3)）并写入，**只增不减**；`*_batches_done < *_batches_total` 时禁止推进到下一阶段。仅当用户在对话中显式点名模块范围才可置 `work_mode="core_priority"`，此时 `batch.skipped_modules` 记录未覆盖模块，交付强制进附录 F。
 
 ---
 
@@ -12,7 +13,7 @@
 {
   "meta": {
     "skill": "ManualGen",
-    "version": "6.1.0",
+    "version": "6.2.0",
     "state": "START|L0_SKELETON|L1_MODULE|L2_REGION|L3_FUNCTION|L4_OPERATION|L5_DETAIL|GRAPH_BUILD|GAP_ANALYSIS|AUTO_REVIEW|RESOLVE|WRITE|REFINE|REFERENCE_CHECK|INTEGRATE|AUDIT|TODO_RESOLVE|JUDGE|DONE|FAILED",
     "sub_state": null, // 阶段内子状态，如 "PROCESSING_BATCH_2"；各阶段主控统一读写 meta.state，不得使用其他别名
     "session_id": "manual_20260811_143000",
@@ -30,11 +31,12 @@
     "user_preferences": {
       "document_style": "detailed", // concise | detailed | rich_media
       "role_focus": null, // 如 "只写销售人员操作"，null为全角色
-      "module_priority": ["MOD_001", "MOD_002"], // 核心优先模式，先处理这些
+      "module_priority": [], // 用户显式点名的优先模块（仍全量覆盖全部模块，仅调整顺序；空=全量）
       "depth_level": "full", // basic | standard | full
       "language": "zh-CN",
       "custom_notes": null // 用户自定义备注（原样传递）
-    }
+    },
+    "work_mode": "full" // full=全量覆盖(默认，覆盖100%模块) | core_priority=仅当用户显式点名模块范围时启用
   },
 
   "progress": {
@@ -175,11 +177,10 @@
   },
 
   "batch": {
-    "core_modules_first": true, // 是否启用核心优先
-    "core_module_ids": ["MOD_001", "MOD_002", "MOD_003"],
-    "core_completed_layers": ["L0", "L1", "L2"],
-    "secondary_modules_ids": ["MOD_004", "MOD_005", "MOD_006", "MOD_007"],
-    "secondary_paused_at_layer": "L2", // 非核心暂停在哪层
+    "work_mode": "full", // full=全量覆盖(默认) | core_priority=仅用户显式指定模块范围时启用，禁止自行降级
+    "core_module_ids": [], // core_priority 模式下用户点名的模块；全量模式下为空数组
+    "secondary_modules_ids": [], // core_priority 模式下其余模块（仍全量扫到L2作背景）
+    "skipped_modules": [], // 未达到L3+深度的模块清单（core_priority 模式交付时强制进「附录F」）
     "modules_per_batch": 3,
     "pages_per_batch": 3,
     "regions_per_batch": 6,
@@ -363,5 +364,5 @@ JUDGE 通过后：
 
 ---
 
-**版本**: 6.1.0-json
+**版本**: 6.2.0-json
 **最后更新**: 2026-08-11

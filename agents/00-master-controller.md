@@ -216,5 +216,5 @@ JUDGE 盲审返回 per_module_scores 后：
 
 ---
 
-**版本**: 6.1.0-agent00master
+**版本**: 6.2.0-agent00master
 **最后更新**: 2026-08-11

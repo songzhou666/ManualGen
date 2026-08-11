@@ -476,5 +476,5 @@ OUTPUT: [{ node_id, name, layer, confidence, evidence_count }]
 
 ---
 
-**版本**: 6.1.0-graph
+**版本**: 6.2.0-graph
 **最后更新**: 2026-08-11

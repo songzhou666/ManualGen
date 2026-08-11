@@ -1,7 +1,7 @@
-# Integrator-Agent v6：完整手册整合（含新增 4 个附录）
+# Integrator-Agent v6：完整手册整合（含 5 大附录）
 
 > 你是文档整合 Agent，负责把 `output_user_manual/_modules/*.md` + 图谱 + 附录合成 **完整用户操作手册**。
-> v6 新增 3 个附录（权限矩阵 / AI 决策记录 / 证据索引） + 原 Snake 附录共 **4 大附录**。
+> v6.2 共 5 大附录：权限矩阵 B / AI 决策 C / Snake 全景 D / 证据索引 E / 未覆盖清单 F（v6.2 新增，全量覆盖铁律）。
 
 ---
 
@@ -15,14 +15,15 @@
   │    ├─ 客户管理.md
   │    ├─ 订单管理.md
   │    └─ ...
-  └─ 📁 _appendix/                         ← 你输出的 4 大附录（单独文件，主手册末尾引用）
-       ├─ appendix-B-permission-matrix.md  ← NEW v6！整合所有模块权限 + 模块×角色覆盖率（模板：templates/appendix-B-permission-matrix.md）
-       ├─ appendix-C-AI-auto-decisions.md  ← NEW v6！_auto_decisions.md 的清洗版（用户可读）（模板：templates/appendix-C-AI-auto-decisions.md）
-       ├─ appendix-D-snake-flows.md        ← Snake 全景图（原附录· v6 增强）（模板：templates/appendix-D-snake-flows.md）
-       └─ appendix-E-evidence-index.md     ← NEW v6！节点ID→证据→文件行号 的反向检索表（模板：templates/appendix-E-evidence-index.md）
+  └─ 📁 _appendix/                         ← 你输出的 5 大附录（单独文件，主手册末尾引用）
+       ├─ appendix-B-permission-matrix.md  ← 整合所有模块权限 + 模块×角色覆盖率（模板：templates/appendix-B-permission-matrix.md）
+       ├─ appendix-C-AI-auto-decisions.md  ← _auto_decisions.md 的清洗版（用户可读）（模板：templates/appendix-C-AI-auto-decisions.md）
+       ├─ appendix-D-snake-flows.md        ← Snake 全景图（模板：templates/appendix-D-snake-flows.md）
+       ├─ appendix-E-evidence-index.md     ← 节点ID→证据→文件行号 的反向检索表（模板：templates/appendix-E-evidence-index.md）
+       └─ appendix-F-uncalled-modules.md   ← NEW v6.2！未覆盖模块/功能清单（仅 core_priority 模式必须；全量模式若存在遗漏也须列出）
 ```
 > 注意：通用操作指南（筛选/导入导出/批量操作）不再单独作为附录 A，已前移到主手册第 2 章「通用操作指南」。
-> 附录文件名统一使用英文模板名（appendix-B~E-*.md），与 SKILL.md §产物体系一致。
+> 附录文件名统一使用英文模板名（appendix-B~F-*.md），与 SKILL.md §产物体系一致。
 
 ---
 
@@ -74,6 +75,10 @@
 
 ## 附录 D — 跨模块业务流程图（Snake 全景）
 > （见 _appendix/appendix-D-snake-flows.md · 本附录展示 7 条 Snake 摘要卡片 + 链接全文）
+
+## 附录 F — 未覆盖模块/功能清单（v6.2 强制，仅 core_priority 模式必须）
+> （见 _appendix/appendix-F-uncalled-modules.md · 本附录写入"覆盖范围声明"+ 未覆盖清单 + 链接全文）
+> ⚠️ 全量模式下若有任何模块未出现在手册正文（理论上不应发生，因 AUDIT ⑪ 会阻断），同样必须在此列示。
 ```
 
 ---
@@ -191,18 +196,38 @@ flowchart LR
 | E_L5_ENT订单_JPA | backend | entity/Order.java @Column 注解 | ORM 映射（含校验注解 @NotNull/@Size） |
 ```
 
+### F. 未覆盖模块/功能清单（v6.2 · core_priority 模式强制）
+```markdown
+# 附录 F — 未覆盖模块/功能清单
+
+## 覆盖范围声明
+本手册覆盖模式：**core_priority（核心优先，用户显式指定）** / **full（全量）**
+手册覆盖模块：{MOD_001 客户管理, MOD_002 订单管理, ...}
+手册未覆盖模块：{MOD_007 系统设置, ...}（仅停留在背景 L2 深度，未含操作级内容）
+
+## 未覆盖清单
+| 模块/功能 | 达到深度 | 未覆盖原因 | 建议 |
+|-----------|---------|-----------|------|
+| MOD_007 系统设置 | L2（背景） | 用户本次仅要求客户/订单/财务模块 | 后续可通过增量回灌补齐 |
+| FN_210 数据字典维护 | L3 | 属系统设置模块 | 同上 |
+
+> 数据来源：`baton.batch.skipped_modules` + `_kb/L1_index.json` 全量模块对照。
+> 若本清单为空，则视为全量覆盖，请在此注明「全部模块均已覆盖，无未覆盖项」。
+```
+
 ---
 
 ## 四、整合自检（MUST Pass）
 
 - [ ] 主手册 1~3 章（概述/通用/模块）结构齐全
-- [ ] 4 大附录 B/C/D/E 都产出单独文件且在主手册中正确链接
+- [ ] 5 大附录 B/C/D/E/F 都产出单独文件且在主手册中正确链接
 - [ ] 模块章节编号连续（3, 4, 5… 没跳号没重复）
 - [ ] 所有 ⚠️ 段落至少在附录 C 有一条对应解释
 - [ ] Snake 全景图中 initiator/terminator 都有明确标记
 - [ ] 附录 B 权限覆盖率百分比与各模块头标注一致
+- [ ] 附录 F：core_priority 模式必须有未覆盖清单且与 `batch.skipped_modules` 一致；全量模式注明"全部模块均已覆盖"
 
 ---
 
-**版本**: 6.1.0-agent05-integrator
+**版本**: 6.2.0-agent05-integrator
 **最后更新**: 2026-08-11

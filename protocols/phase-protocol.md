@@ -11,11 +11,11 @@
 |---|------|--------|---------|----------------|------------------|
 | 0 | START | 主控 | 无 | baton(START) | project_root 存在 |
 | 1 | L0_SKELETON | Skeleton + NodeWeaver | baton | `_kb/L0_skeleton.json` | modules + roles 都≥1，data_creation_chain 给出 |
-| 2 | L1_MODULE | Skeleton + NodeWeaver | L0_skeleton | `_kb/L1_modules/*.json` + `L1_INDEX.json` | 批数完成率 100%，每页都有 module_id |
-| 3 | L2_REGION | Skeleton + NodeWeaver | L1_INDEX | `_kb/L2_regions/*.json` | 每PAGE至少3个REGION（含分页/操作栏/表格区常见） |
-| 4 | L3_FUNCTION | Skeleton + NodeWeaver | L2 regions | `_kb/L3_functions/*.json` | ≥90% FUNCTION 带 trigger_element + OPERATES_ON |
-| 5 | L4_OPERATION | Skeleton + NodeWeaver | L3 functions | `_kb/L4_operations/*.json` | 每个 FN 拆≥5个 STEP，STEP next_steps 完整 |
-| 6 | L5_DETAIL | Skeleton + NodeWeaver | L4 operations | `_kb/L5_details/{ENTITY,ROLE,ELEMENT,VALIDATION,AGGREGATE}/*.json` | 核心 ENTITY.fields ≥ 5 且 validation ≥ 2 条每模块 |
+| 2 | L1_MODULE | Skeleton + NodeWeaver | L0_skeleton | `_kb/L1_modules/*.json` + `L1_INDEX.json` | 批数完成率 100%（`batches_done==batches_total`），每页都有 module_id |
+| 3 | L2_REGION | Skeleton + NodeWeaver | L1_INDEX | `_kb/L2_regions/*.json` | **全部页面**每PAGE至少3个REGION（含分页/操作栏/表格区常见）+ 批数完成率100% |
+| 4 | L3_FUNCTION | Skeleton + NodeWeaver | L2 regions | `_kb/L3_functions/*.json` | **全部区域** ≥90% FUNCTION 带 trigger_element + OPERATES_ON + 批数完成率100% |
+| 5 | L4_OPERATION | Skeleton + NodeWeaver | L3 functions | `_kb/L4_operations/*.json` | **全部** FN 拆≥5个 STEP，STEP next_steps 完整 + 批数完成率100% |
+| 6 | L5_DETAIL | Skeleton + NodeWeaver | L4 operations | `_kb/L5_details/{ENTITY,ROLE,ELEMENT,VALIDATION,AGGREGATE}/*.json` | **全部 ENTITY** fields ≥ 5 且 validation ≥ 2 条每模块 + 批数完成率100% |
 | 7 | GRAPH_BUILD | GraphBuilder + EntityAligner | 六层 | `graph/_nodes/_triples/_evidence/_snakes/_layer_index/_quality.json` （6个全） | 6个JSON都存在 + nodes ≥ MODULE数+PAGE数+FN数 |
 | 8 | GAP_ANALYSIS | 主控（含可选回灌） | graph_quality.json | `_gap_analysis.md` + `_auto_decisions.md` 回灌决策段 | 缺口分级完整（P0/P1/P2/P3都写） |
 | 9 | AUTO_REVIEW | 主控 AI 自审 | gap_analysis.md + graph | `_auto_decisions.md` 低置信裁决段 | low_confidence_nodes 占比 ≤ 15% 或已被AI处理 |
@@ -23,7 +23,7 @@
 | 11 | WRITE | 主控（调度 Module-Writer 子Agent） | resolution + graph | `output_user_manual/_modules/*.md` | 模块文档数=MODULE数；每个≥4KB且结构齐备（见 agent04 §自检） |
 | 12 | REFINE | 主控（调度 Refiner 子Agent） | `output_user_manual/_modules/*.md` | `_refine_log.md` | 各模块 REFINE 清单 ≥8/10（不合格自主修复后达标） |
 | 13 | REFERENCE_CHECK | 主控 Graph 反向查询 | modules + triples | `_reference_check.md` | 术语一致率 & 引用有效率 ≥ 95% |
-| 14 | INTEGRATE | Integrator v6 | `output_user_manual/_modules/` + graph + snakes | `output_user_manual/_appendix/B~E.md` + `{项目名称} 用户操作手册.md` + `_integration.md` | 主手册不含 _modules 外链；4 大附录都产出 |
+| 14 | INTEGRATE | Integrator v6 | `output_user_manual/_modules/` + graph + snakes | `output_user_manual/_appendix/B~F.md` + `{项目名称} 用户操作手册.md` + `_integration.md` | 主手册不含 _modules 外链；**5 大附录 B/C/D/E/F 都产出**（附录F=未覆盖清单） |
 | 15 | AUDIT | 主控（10维度，含2个新增图谱） | _integration.md + graph_quality | `_audit.md` + _audit-summary.md | 10 维 ≥ 60；新增2个图谱维度权重20% |
 | 16 | TODO_RESOLVE | 主控 AI 逐条解决 | audit.md | `_todo_resolution.md` + updated todo_list | P0 TODO 100% RESOLVED 或 BLOCKER 评估完成 |
 | 17 | JUDGE | 子 Agent 盲审（模块级打回） | _judgment.md | `_judgment.md`（含 per_module_scores） | ≥70%模块 PASS；不合格且≤2次重试返回 WRITE；≥3次 DONE+⚠️ |
@@ -233,5 +233,5 @@ DONE → 最终交付
 
 ---
 
-**版本**: 6.1.0
+**版本**: 6.2.0
 **最后更新**: 2026-08-11

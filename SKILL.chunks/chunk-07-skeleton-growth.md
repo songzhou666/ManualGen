@@ -34,7 +34,7 @@
 | data_creation_chain[] | entity_name[] | 按创建依赖顺序排列，如 ["字典数据", "部门", "用户", "订单"] |
 | project_shape / tech_stack | string | 单体/微服务，前后端技术栈 |
 | scale_estimate | string | S1~S4预估 |
-| core_module_ids | string[] | 自动识别的核心模块（功能最多/处于数据链中游） |
+| core_module_ids | string[] | 自动识别的核心模块（功能最多/处于数据链中游）——**仅用于排序/推荐，绝不允许用于跳过层级生长；默认全量模式仍须覆盖全部模块** |
 | evidence[].file / snippet | — | 每个模块、角色的来源证据 |
 
 ### 同步生成 `L0_skeleton_report.md`（给 AUTO_REVIEW 自审、附录 C、用户主动追问进度共享）
@@ -65,8 +65,10 @@ flowchart LR
 ## 4. 数据创建链（需按此顺序操作）
 字典数据 → 部门/组织 → 用户/员工 → 客户档案 → 商品档案 → 订单 → 收付款
 
-## 5. 核心优先建议
-建议先完成 [客户管理, 订单管理, 库存管理] L0-L5全流程，再补系统设置/财务。
+## 5. 模块处理顺序（默认全量覆盖，core 仅决定先后）
+全量模式下 L1 起按 sort_order 逐批覆盖**全部模块**，直至 `batches_done == batches_total`；
+core_module_ids 只用于决定批次先后顺序（先处理核心），**不得省略任何模块**。
+（仅当用户在对话中显式点名模块范围时才进入核心优先模式，见 §分批策略。）
 ```
 
 ### L0 闸门 G0 自检清单（全部通过才能进L1）
@@ -83,11 +85,15 @@ flowchart LR
 
 ### 分批策略
 ```
-核心优先模式（默认大项目开启）：
-  批次 1：[MOD_001, MOD_002, MOD_003]（核心模块）
-  批次 2：[MOD_004, MOD_005]          （次核心）
-  批次 3：[MOD_006, MOD_007]          （非核心，可只跑到L2暂停）
-普通模式：
+全量模式（默认，最高优先级）：
+  每批 2-3 个模块，顺序按 sort_order，循环批次直到**覆盖 L0 骨架中全部模块**。
+  batches_total = ceil(模块总数 / 每批上限)，进入 L1 时写入 baton 并只增不减。
+  batches_done < batches_total 时禁止进入 L2。
+核心优先模式（⚠️ 仅当用户在对话中显式点名模块范围时才启用）：
+  批次 1：[MOD_001, MOD_002, MOD_003]（用户指定的核心模块）
+  批次 2：[MOD_004, MOD_005]          （其余模块仍全量扫到L2作背景）
+  …… 未进入核心优先指定的模块，最终必须列入「附录 F：未覆盖模块/功能清单」，禁止静默跳过。
+普通模式（等价全量，仅排序偏好）：
   每批 2-3 个模块，顺序按 sort_order
 ```
 
@@ -170,12 +176,13 @@ flowchart LR
 }
 ```
 
-### L1 闸门 G1 自检（核心优先模式只看核心模块）
-- [ ] 核心模块的 pages.length ≥ 2 且每页都有 entry_points
-- [ ] 核心模块的 entities.length ≥ 1
-- [ ] 核心模块的 high_frequency_scenarios.length ≥ 3
+### L1 闸门 G1 自检（默认全量：覆盖全部模块）
+- [ ] **全部模块**（L0 骨架 modules 100%）的 pages.length ≥ 2 且每页都有 entry_points
+- [ ] **全部模块**的 entities.length ≥ 1
+- [ ] **全部模块**的 high_frequency_scenarios.length ≥ 3
 - [ ] 每个 PAGE 的 component_path 在项目中实际存在（Glob校验）
 - [ ] L1_index.json 非空，progress标记与L1_*.json 文件数量一致
+- [ ] `batches_done == batches_total`（批循环已覆盖全部模块）
 
 ---
 
@@ -183,7 +190,7 @@ flowchart LR
 
 ### 分批策略
 每批 3 个页面（不分模块），按页面在模块内的出现顺序排序。
-优先处理核心模块的页面，再处理非核心。
+批循环直到覆盖**全部页面**（L1 模块中识别的所有页面），`batches_done < batches_total` 时禁止进入 L3。
 
 ### 代码读取范围（每批只读本批3页的组件template）
 ```
@@ -256,10 +263,11 @@ flowchart LR
 ```
 
 ### L2 闸门 G2 自检
-- [ ] 核心模块的每个页面都有 ≥3 个 REGION（最少：搜索 + 列表 + 分页）
+- [ ] **全部页面**的每个页面都有 ≥3 个 REGION（最少：搜索 + 列表 + 分页）
 - [ ] ≥ 1 条 inter_region_triggers（区域间有触发关系）
 - [ ] 有 visible_conditions 的区域都明确了条件来源（角色/数据/状态）
 - [ ] 每个 REGION 的 region_type 在规范枚举内（search_bar/data_table/detail_form/tab_panel/sidebar/action_bar/pager）
+- [ ] `batches_done == batches_total`（批循环已覆盖全部页面）
 
 ---
 
@@ -267,6 +275,7 @@ flowchart LR
 
 ### 分批策略
 每批 6 个 REGION（可跨页面跨模块），按模块 → 页面 → 区域顺序排序。
+批循环直到覆盖**全部区域**（L2 页面中识别的所有区域），`batches_done < batches_total` 时禁止进入 L4。
 
 ### 代码读取范围（每批只读本批6区域的 handler 代码片段）
 ```
@@ -336,10 +345,11 @@ flowchart LR
 ```
 
 ### L3 闸门 G3 自检（通过才能进L4）
-- [ ] 核心区域的 FUNCTION 数 ≥ 2（列表操作区应该有新增/编辑/删除/导出等）
+- [ ] **全部区域**的 FUNCTION 数 ≥ 2（列表操作区应该有新增/编辑/删除/导出等）
 - [ ] 每个 FUNCTION 都有 trigger_element（知道点哪个按钮触发）
 - [ ] 每个 FUNCTION 都有 ≥ 1 条 evidence（前端或后端），cross_verified优先
 - [ ] 高风险操作 risk_level=high/critical 都有 requires_confirmation=true
+- [ ] `batches_done == batches_total`（批循环已覆盖全部区域）
 
 ---
 
@@ -347,6 +357,7 @@ flowchart LR
 
 ### 分批策略
 每批 4 个 FUNCTION。优先按模块分组，同模块的 FUNCTION 放一批（共享上下文）。
+批循环直到覆盖**全部功能**（L3 区域中识别的所有功能），`batches_done < batches_total` 时禁止进入 L5。
 
 ### 核心规则：**禁止读源码！** 只能从 `_kb/L0~L3/*.json` 查询节点信息编织。
 > 为什么？因为L4起写出来的内容**直接会变成用户手册文字**，如果这步还读源码，上下文会被API/数据库污染，WRITE阶段隔离就没用了。
@@ -414,17 +425,18 @@ flowchart LR
 ```
 
 ### L4 闸门 G4 自检
-- [ ] 核心 FUNCTION 的 steps.length ≥ 5（含前置条件 + 错误分支）
+- [ ] **全部 FUNCTION** 的 steps.length ≥ 5（含前置条件 + 错误分支）
 - [ ] 每个 FUNCTION 的 flowchart_mermaid 为合法 Mermaid 代码（含 `flowchart` 关键字）
 - [ ] 有 ≥ 2 个 branch_paths（不是一条直线）
 - [ ] 每个 STEP 的 target_element_id 能在 L3_FUNCTION / ELEMENT 中找到（或合理为 precondition/feedback）
+- [ ] `batches_done == batches_total`（批循环已覆盖全部功能）
 
 ---
 
 ## §L5 细节层：按操作分批填极致细节（局部精读源码）
 
 ### 分批策略
-每批 5 个 STEP。优先填核心 FUNCTION（新增/编辑/审核）的字段和按钮细节。
+每批 5 个 STEP。按 FUNCTION 顺序覆盖**全部操作**（不允许只挑核心 FUNCTION），字段和按钮细节一律补齐。
 
 ### 代码读取范围（局部精读，不读全局）
 ```
@@ -519,10 +531,11 @@ flowchart LR
 ```
 
 ### L5 闸门 G5 自检（与 SKILL.md 闸门表对齐）
-- [ ] 核心 ENTITY 的字段 documented_fields / fields_total ≥ 80%
-- [ ] 权限矩阵 coverage_percent ≥ 70%
+- [ ] **全部 ENTITY** 的字段 documented_fields / fields_total ≥ 80%（不允许只查核心实体）
+- [ ] 权限矩阵 coverage_percent ≥ 70%（覆盖全部 ROLE × FUNCTION 组合）
 - [ ] 高风险 FUNCTION 的按钮有 disabled 状态（有条件禁用）
 - [ ] ≥ 50 条 error_message（含错误场景 + 文案 + 触发FUNCTION）
+- [ ] `batches_done == batches_total`（批循环已覆盖全部操作/实体）
 
 ---
 
@@ -571,5 +584,5 @@ flowchart LR
 
 ---
 
-**版本**: 6.1.0-chunk07
+**版本**: 6.2.0-chunk07
 **最后更新**: 2026-08-11
