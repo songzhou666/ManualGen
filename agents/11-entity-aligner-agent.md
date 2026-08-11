@@ -10,14 +10,14 @@
 ```
 ENTITY 总集合 E （n 个，按 n*n 两两配对，但用倒排索引加速）
 对所有 (eA, eB), eA.id < eB.id：
-  1. name_sim = 中文名称相似度（字重叠+拼音相似度 + alias 重合）
-  2. fields_jaccard =
-        len(eA.fields∩eB.fields) / len(eA.fields∪eB.fields)
-        若 eA.fields 或 eB.fields 未填 → 设为 0.2（降权）
-  3. common_neighbors =
-        同时 (eA,eB) 被 MODULE/MANAGES 共同引用的模块数 / max(1, 被各自引用数)
-        + 同时 (eA,eB) 被 FUNCTION/OPERATES_ON 共同引用的函数重合比
-  4. type_match = (eA.type == eB.type) ? 1.0 : (eA.type ∈ {table,dto} 且 eB.type ∈ {table,dto}) ? 0.6 : 0.0
+ 1. name_sim = 中文名称相似度（字重叠+拼音相似度 + alias 重合）
+ 2. fields_jaccard =
+ len(eA.fields∩eB.fields) / len(eA.fields∪eB.fields)
+ 若 eA.fields 或 eB.fields 未填 → 设为 0.2（降权）
+ 3. common_neighbors =
+ 同时 (eA,eB) 被 MODULE/MANAGES 共同引用的模块数 / max(1, 被各自引用数)
+ + 同时 (eA,eB) 被 FUNCTION/OPERATES_ON 共同引用的函数重合比
+ 4. type_match = (eA.type == eB.type) ? 1.0 : (eA.type ∈ {table,dto} 且 eB.type ∈ {table,dto}) ? 0.6 : 0.0
 
 overall_score = 0.40*name_sim + 0.35*fields_jaccard + 0.15*common_neighbors + 0.10*type_match
 ```
@@ -41,15 +41,15 @@ AI 自主按以下规则优先顺序判，**不询问用户**：
 | 完全不同 source_type 但 fields_jaccard ≥ 0.65 | MERGE | 「用户」backend.entity vs 「User」前端 dto，但字段高度重合 → 对齐为同一（跨端同义词） |
 | 模块不同 + fields 重合<3 + name 仅部分字相同 | NO_MERGE（标记 uncertain=true） | 「日志审计」系统管理模块 vs 「日志」运维模块 → 虽都含"日志"但实体不同 |
 | 模块同一 + fields 重合 3~5 + name_similarity>0.7 | MERGE | 「客户主档」和「客户」同一 MOD_客户管理 → 判定都是 ENT_客户 |
-| 无法归入以上任何一条 | MERGE（但 ENTITY.meta.alignment_merged_with_uncertainty=true） | 先合并，后续若产生问题 WRITE 阶段加⚠️标注或 AUDIT 扣分 |
+| 无法归入以上任何一条 | MERGE（但 ENTITY.meta.alignment_merged_with_uncertainty=true） | 先合并，后续若产生问题 WRITE 阶段加标注或 AUDIT 扣分 |
 
 ### 裁决记录
 所有 NEED_AI_REVIEW 的决策都追加写 `_auto_decisions.md`：
 ```
 [ENTITY_ALIGN] 候选对 #12 (ENT_049=客户主档, ENT_011=客户)
-  相似度：name=0.82 fields_jaccard=0.57 common_neighbors=0.50 type_match=1.0 → overall=0.71
-  AI 裁决：MERGE（规则：模块同一 + fields 重合 3~5 + name_similarity>0.7）
-  主实体：ENT_011「客户」，从实体别名「客户主档」追加到 ENT_011.aliases[]
+ 相似度：name=0.82 fields_jaccard=0.57 common_neighbors=0.50 type_match=1.0 → overall=0.71
+ AI 裁决：MERGE（规则：模块同一 + fields 重合 3~5 + name_similarity>0.7）
+ 主实体：ENT_011「客户」，从实体别名「客户主档」追加到 ENT_011.aliases[]
 ```
 
 ---
@@ -58,15 +58,15 @@ AI 自主按以下规则优先顺序判，**不询问用户**：
 
 ```
 对每个 MERGE(e_master, e_slave)：
-  1. e_master.aliases.push(e_slave.name);
-     if e_slave.aliases not empty → 都合并进 e_master.aliases
-  2. e_master.fields = union(e_master.fields, e_slave.fields)
-     （按 field.name 去重；两边都有定义但 validation 不同 → 都保留，标记冲突=conflict_in_fields_merge 交给 L5_DETAIL 回灌时再 AI 裁决）
-  3. 合并证据：e_master.evidence_ids = union(e_master.evidence_ids, e_slave.evidence_ids)
-  4. 更新三元组 object_id / subject_id 中 e_slave.id → e_master.id（全部重定向）
-  5. 受影响传播：所有引用 e_slave 的 FUNCTION / STEP / MODULE.MANAGES 节点标记 dirty_by_entity_merge=true
-     → GraphBuilder Step6 会对这些节点重算 confidence + 下游 Snake 若包含这些节点会重新校正顺序
-  6. GraphBuilder 将 e_slave 标记「merged_into: e_master.id」，在 _nodes.json 列表里保留但置 disabled=true（供追溯，不参与后续写入）
+ 1. e_master.aliases.push(e_slave.name);
+ if e_slave.aliases not empty → 都合并进 e_master.aliases
+ 2. e_master.fields = union(e_master.fields, e_slave.fields)
+ （按 field.name 去重；两边都有定义但 validation 不同 → 都保留，标记冲突=conflict_in_fields_merge 交给 L5_DETAIL 回灌时再 AI 裁决）
+ 3. 合并证据：e_master.evidence_ids = union(e_master.evidence_ids, e_slave.evidence_ids)
+ 4. 更新三元组 object_id / subject_id 中 e_slave.id → e_master.id（全部重定向）
+ 5. 受影响传播：所有引用 e_slave 的 FUNCTION / STEP / MODULE.MANAGES 节点标记 dirty_by_entity_merge=true
+ → GraphBuilder Step6 会对这些节点重算 confidence + 下游 Snake 若包含这些节点会重新校正顺序
+ 6. GraphBuilder 将 e_slave 标记「merged_into: e_master.id」，在 _nodes.json 列表里保留但置 disabled=true（供追溯，不参与后续写入）
 ```
 
 ---
@@ -76,11 +76,11 @@ AI 自主按以下规则优先顺序判，**不询问用户**：
 Graph Step2 三元组生成前，EntityAligner 还需做一轮扫尾：
 ```
 对所有 FUNCTION 节点 fn：
-  若 fn.target_entity_id 为空但 fn.description/steps 明确提到"操作X实体"：
-    - 用语义匹配 ENTITY 的 name + aliases
-    - 找到 ≥1 个候选 ENT_xxx：
-        confidence < 0.70 → 不自动填，fn.meta.uncertain_target_entity=true（后续 AUTO_REVIEW 裁决）
-        confidence ≥ 0.70 → 直接填 fn.target_entity_id + 写入 OPERATES_ON 三元组 + 写 AI 决策
+ 若 fn.target_entity_id 为空但 fn.description/steps 明确提到"操作X实体"：
+ - 用语义匹配 ENTITY 的 name + aliases
+ - 找到 ≥1 个候选 ENT_xxx：
+ confidence < 0.70 → 不自动填，fn.meta.uncertain_target_entity=true（后续 AUTO_REVIEW 裁决）
+ confidence ≥ 0.70 → 直接填 fn.target_entity_id + 写入 OPERATES_ON 三元组 + 写 AI 决策
 ```
 
 ---

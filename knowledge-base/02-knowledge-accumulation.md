@@ -1,6 +1,6 @@
 # 知识累加机制
 
-> **⚠️ LEGACY（v5 保留）**：本文件描述 v5 的 Markdown 会话快照累加机制。**v6 主流程改为增量回灌机制**（`protocols/todo-protocol.md` + chunk-09 + `_kb/_backfill_log.md`），按 LAYER+MODULE 局部重做。本文仅对 v5 兼容路径（02-analyzer-agent 分批分析）生效。
+> ** LEGACY（v5 保留）**：本文件描述 v5 的 Markdown 会话快照累加机制。**v6 主流程改为增量回灌机制**（`protocols/todo-protocol.md` + chunk-09 + `_kb/_backfill_log.md`），按 LAYER+MODULE 局部重做。本文仅对 v5 兼容路径（02-analyzer-agent 分批分析）生效。
 
 > **核心原则**：每次分析都在前一次基础上累加，禁止从零开始。
 
@@ -10,14 +10,14 @@
 
 ```
 Session 1: 首次分析
-  → 生成 _exploration.md, _extraction.md, _analysis.md, _function_survey.md, _gap_analysis.md
-  → 存档会话快照到 knowledge-base/history/v1/
+ → 生成 _exploration.md, _extraction.md, _analysis.md, _function_survey.md, _gap_analysis.md
+ → 存档会话快照到 knowledge-base/history/v1/
 
 Session 2（代码变更后）:
-  → 读取历史产物（全部读取，理解已有内容）
-  → 对比代码变更（git diff / 文件对比）
-  → 在已有产物末尾追加变更内容
-  → 存档到 knowledge-base/history/v2/
+ → 读取历史产物（全部读取，理解已有内容）
+ → 对比代码变更（git diff / 文件对比）
+ → 在已有产物末尾追加变更内容
+ → 存档到 knowledge-base/history/v2/
 ```
 
 ## 二、增量标记规范
@@ -42,14 +42,14 @@ Session 2（代码变更后）:
 ```
 knowledge-base/history/
 ├── v1/
-│   ├── exploration.md
-│   ├── analysis-partial.md
-│   └── checklist-v1.json
+│ ├── exploration.md
+│ ├── analysis-partial.md
+│ └── checklist-v1.json
 ├── v2/
-│   ├── extraction.md
-│   ├── analysis-full.md
-│   └── checklist-v2.json
-└── index.yaml  # 版本索引（记录每版时间戳和变更摘要）
+│ ├── extraction.md
+│ ├── analysis-full.md
+│ └── checklist-v2.json
+└── index.yaml # 版本索引（记录每版时间戳和变更摘要）
 ```
 
 ## 四、检查规则

@@ -10,7 +10,7 @@
 
 | # | Snake ID | 类型 | 名称 | 跨模块数 | 节点数 | 完整度（complete?） | 负责角色（主要 / 次要） |
 |---|----------|------|------|:-------:|:-----:|:------------------:|----------------------|
-| 1 | SNAKE_001 | | | | | ✅/⚠️ | / |
+| 1 | SNAKE_001 | | | | | / | / |
 | 2 | SNAKE_002 | | | | | | |
 | 3 | SNAKE_003 | | | | | | |
 
@@ -20,45 +20,45 @@
 
 ### D.1.1 {{ SNAKE_001.name }}（{{ SNAKE_001.id }} · end_to_end_flow）
 
-**适用用户**：  
-**业务场景**：一句话说清这条蛇解决什么真实业务问题（例：客户在系统内从下单→到财务收到款项的完整闭环操作）。  
-**关联模块**：{{ MOD_001.name }} → {{ MOD_002.name }} → …（按 order 数组展开）  
+**适用用户**：
+**业务场景**：一句话说清这条蛇解决什么真实业务问题（例：客户在系统内从下单→到财务收到款项的完整闭环操作）。
+**关联模块**：{{ MOD_001.name }} → {{ MOD_002.name }} → …（按 order 数组展开）
 **前置条件**：①登录并具备…角色；②已有…实体记录；③…
 
 #### 全景流程图
 
 ```mermaid
 flowchart LR
-    subgraph MOD_001_模块名["🛒 模块 1：客户管理"]
-      direction LR
-      N1(["① 创建客户档案"])
-      N2(["② 客户分级打标"])
-    end
-    subgraph MOD_002_模块名["🧾 模块 2：订单管理"]
-      direction LR
-      N3(["③ 新建销售订单（选客户）"])
-      N4(["④ 订单提交审核"])
-    end
-    subgraph MOD_003_模块名["💰 模块 3：财务收款"]
-      direction LR
-      N5(["⑤ 财务确认到款"])
-      N6(["⑥ 订单状态自动改为已支付"])
-    end
-    N1 --> N2 --> N3 --> N4 --> N5 --> N6
+ subgraph MOD_001_模块名[" 模块 1：客户管理"]
+ direction LR
+ N1(["① 创建客户档案"])
+ N2(["② 客户分级打标"])
+ end
+ subgraph MOD_002_模块名["模块 2：订单管理"]
+ direction LR
+ N3(["③ 新建销售订单（选客户）"])
+ N4(["④ 订单提交审核"])
+ end
+ subgraph MOD_003_模块名[" 模块 3：财务收款"]
+ direction LR
+ N5(["⑤ 财务确认到款"])
+ N6(["⑥ 订单状态自动改为已支付"])
+ end
+ N1 --> N2 --> N3 --> N4 --> N5 --> N6
 
-    classDef ok fill:#e6f7ea,stroke:#2ea043,stroke-width:1px
-    classDef warn fill:#fff4e5,stroke:#d4a72c,stroke-width:1px
-    class N1,N2,N3,N4,N5,N6 ok
+ classDef ok fill:#e6f7ea,stroke:#2ea043,stroke-width:1px
+ classDef warn fill:#fff4e5,stroke:#d4a72c,stroke-width:1px
+ class N1,N2,N3,N4,N5,N6 ok
 ```
 
 #### 分步操作指引（按节点顺序串，跳到对应模块正文时给出链接锚）
 
 1. **① {{ N1.name }}** → 详见「{{ MOD_001.name }} → …」章节（p.XX）
-   - 关键角色：
-   - 关键字段：
-   - 常见误操作：
+ - 关键角色：
+ - 关键字段：
+ - 常见误操作：
 2. **② {{ N2.name }}** → 详见「{{ MOD_001.name }} → …」
-   - …
+ - …
 3. **③ …**
 
 #### 异常与兜底路径
@@ -87,14 +87,14 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-    S1["SNAKE_001 订单全生命周期"]
-    S2["SNAKE_002 财务对账（依赖 S1 完成到第⑤节点）"]
-    S3["SNAKE_003 售后退款（反向复用 S1 的⑤节点作为前置）"]
-    S1 --> S2
-    S1 --> S3
+ S1["SNAKE_001 订单全生命周期"]
+ S2["SNAKE_002 财务对账（依赖 S1 完成到第⑤节点）"]
+ S3["SNAKE_003 售后退款（反向复用 S1 的⑤节点作为前置）"]
+ S1 --> S2
+ S1 --> S3
 ```
 
 ---
 
-**版本**: v6.1-appendix-D
+**版本**: v6.2-appendix-D
 **最后更新**: 2026-08-11

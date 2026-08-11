@@ -69,9 +69,9 @@ ManualGen 内置分批分析机制。当项目文件数超过阈值时，AI 自�
 ```markdown
 | 批次 | 模块 | 状态 | 产物文件 |
 |------|------|------|----------|
-| 1/3 | 客户管理, 订单管理, 商品管理 | ✅ 完成 | _analysis_batch_001.md |
-| 2/3 | 库存管理, 供应商管理, 采购管理 | ✅ 完成 | _analysis_batch_002.md |
-| 3/3 | 财务管理, 报表中心, 系统配置 | 🔄 进行中 | _analysis_batch_003.md |
+| 1/3 | 客户管理, 订单管理, 商品管理 | 完成 | _analysis_batch_001.md |
+| 2/3 | 库存管理, 供应商管理, 采购管理 | 完成 | _analysis_batch_002.md |
+| 3/3 | 财务管理, 报表中心, 系统配置 | 进行中 | _analysis_batch_003.md |
 ```
 
 ### 相关
@@ -98,19 +98,19 @@ JUDGE 阶段由子 Agent 进行独立盲审。如果审核不通过（综合评�
 
 ```
 审核不通过
-    ↓
+ ↓
 读取 _audit.md 中的"待修复问题清单"
-    ↓
+ ↓
 逐项检查阻断项和扣分点
-    ↓
+ ↓
 返回对应阶段修复：
-  - 结构缺失 → 返回 WRITE
-  - 流程图缺失 → 返回 WRITE（补充 Mermaid 图）
-  - 隐私违规 → 返回 WRITE（脱敏后重写）
-  - 术语不一致 → 返回 REFINE
-    ↓
+ - 结构缺失 → 返回 WRITE
+ - 流程图缺失 → 返回 WRITE（补充 Mermaid 图）
+ - 隐私违规 → 返回 WRITE（脱敏后重写）
+ - 术语不一致 → 返回 REFINE
+ ↓
 修复后更新接力棒，重新进入 JUDGE
-    ↓
+ ↓
 盲审通过 → DONE
 ```
 
@@ -129,20 +129,20 @@ ManualGen 的 Master Controller 支持在 WRITE 阶段通过子 Agent 并行编�
 
 | 条件 | 是否可并行 | 示例 |
 |------|-----------|------|
-| 模块间无数据依赖 | ✅ 可并行（最多 3 个） | 客户管理 + 系统配置 |
-| 模块间有数据依赖 | ❌ 不可并行 | 订单管理依赖商品管理 |
-| 模块间有角色共享 | ✅ 可并行 | 只读模块 + 报表模块 |
-| 模块共享同一数据库表 | ⚠️ 谨慎并行 | 需要 Resolver 协调冲突 |
+| 模块间无数据依赖 | 可并行（最多 3 个） | 客户管理 + 系统配置 |
+| 模块间有数据依赖 | 不可并行 | 订单管理依赖商品管理 |
+| 模块间有角色共享 | 可并行 | 只读模块 + 报表模块 |
+| 模块共享同一数据库表 | 谨慎并行 | 需要 Resolver 协调冲突 |
 
 ### 实现机制
 
 ```
 Master Controller
-    ├── 子Agent 1 → 写"客户管理"模块
-    ├── 子Agent 2 → 写"订单管理"模块
-    └── 子Agent 3 → 写"商品管理"模块
-        ↓ 所有子Agent完成
-    REFINE 阶段（逐模块精炼补全）
+ ├── 子Agent 1 → 写"客户管理"模块
+ ├── 子Agent 2 → 写"订单管理"模块
+ └── 子Agent 3 → 写"商品管理"模块
+ ↓ 所有子Agent完成
+ REFINE 阶段（逐模块精炼补全）
 ```
 
 ### 注意事项
@@ -172,14 +172,14 @@ ManualGen 支持跨 Session 续跑（关闭对话后重新打开，状态自动�
 
 ```
 对话重新打开
-    ↓
+ ↓
 用户激活 ManualGen
-    ↓
+ ↓
 AI 执行入口清单：
-  1. 读取接力棒 → 获取当前状态
-  2. 检查前置产物存在性
-  3. 输出 "当前状态：{阶段}，下一步：{操作}"
-    ↓
+ 1. 读取接力棒 → 获取当前状态
+ 2. 检查前置产物存在性
+ 3. 输出 "当前状态：{阶段}，下一步：{操作}"
+ ↓
 从断点继续执行
 ```
 
@@ -238,7 +238,7 @@ AI 会把用户给出的偏好写入 baton.custom_preferences 对象，在 WRITE
 
 ### 常见违规场景
 
-| 场景 | ❌ 错误 | ✅ 正确 |
+| 场景 | 错误 | 正确 |
 |------|--------|--------|
 | 配置文件密码 | `NEO4J_PASSWORD = "msl666666"` | `NEO4J_PASSWORD = "****"` |
 | 数据库连接 | `Server=192.168.1.100;Password=P@ssw0rd` | `Server={服务器地址};Password=****` |
@@ -267,39 +267,39 @@ AI 会把用户给出的偏好写入 baton.custom_preferences 对象，在 WRITE
 
 ```
 {项目路径}/.agent/harness/
-├── _baton.json                # 接力棒（v6 改为 JSON，含 18 阶段进度+批进度+回灌状态）
-├── _kb/                       # 知识底座（六层产物）
-│   ├── L0_skeleton.json       # L0 骨架（模块/角色/依赖）
-│   ├── L1_modules/*.json      # L1 模块（每批 2-3 模块）
-│   ├── L2_pages/*.json        # L2 页面
-│   ├── L3_regions/*.json      # L3 区域
-│   ├── L4_functions/*.json    # L4 功能
-│   ├── L5_details/*.json      # L5 细节（ENTITY/ROLE/ELEMENT/字段详情/权限矩阵/按钮状态）
-│   ├── graph/                 # 知识图谱（6 个 JSON）
-│   │   ├── _nodes.json        #   8类节点归一化
-│   │   ├── _triples.json      #   三元组
-│   │   ├── _evidence.json     #   证据+反向索引
-│   │   ├── _snakes.json       #   跨模块概念链
-│   │   ├── _layer_index.json  #   层级完成度
-│   │   └── _quality.json      #   质量评估汇总
-│   ├── _gap_analysis.md       # 完整性评估
-│   ├── _auto_decisions.md     # AI 自主裁决记录（替代 v5 人工确认）
-│   └── _backfill_log.md       # 增量回灌日志
-├── _refine_log.md             # 精炼日志
-├── _reference_check.md        # 一致性检查报告
-├── _integration.md            # 整合手册（中间产物）
-├── _audit.md                  # 审核报告
-├── _todo_list.md              # TODO 列表
-├── _todo_resolution.md        # TODO 解决报告
-└── _judgment.md               # 盲审判定结果
+├── _baton.json # 接力棒（v6 改为 JSON，含 18 阶段进度+批进度+回灌状态）
+├── _kb/ # 知识底座（六层产物）
+│ ├── L0_skeleton.json # L0 骨架（模块/角色/依赖）
+│ ├── L1_modules/*.json # L1 模块（每批 2-3 模块）
+│ ├── L2_pages/*.json # L2 页面
+│ ├── L3_regions/*.json # L3 区域
+│ ├── L4_functions/*.json # L4 功能
+│ ├── L5_details/*.json # L5 细节（ENTITY/ROLE/ELEMENT/字段详情/权限矩阵/按钮状态）
+│ ├── graph/ # 知识图谱（6 个 JSON）
+│ │ ├── _nodes.json # 8类节点归一化
+│ │ ├── _triples.json # 三元组
+│ │ ├── _evidence.json # 证据+反向索引
+│ │ ├── _snakes.json # 跨模块概念链
+│ │ ├── _layer_index.json # 层级完成度
+│ │ └── _quality.json # 质量评估汇总
+│ ├── _gap_analysis.md # 完整性评估
+│ ├── _auto_decisions.md # AI 自主裁决记录（替代 v5 人工确认）
+│ └── _backfill_log.md # 增量回灌日志
+├── _refine_log.md # 精炼日志
+├── _reference_check.md # 一致性检查报告
+├── _integration.md # 整合手册（中间产物）
+├── _audit.md # 审核报告
+├── _todo_list.md # TODO 列表
+├── _todo_resolution.md # TODO 解决报告
+└── _judgment.md # 盲审判定结果
 
-{项目路径}/output_user_manual/       # ===== 最终交付目录 =====
-├── _modules/*.md              # WRITE 阶段模块文档
-└── _appendix/                 # INTEGRATE 阶段附录
-    ├── appendix-B-permission-matrix.md
-    ├── appendix-C-AI-auto-decisions.md
-    ├── appendix-D-snake-flows.md
-    └── appendix-E-evidence-index.md
+{项目路径}/output_user_manual/ # ===== 最终交付目录 =====
+├── _modules/*.md # WRITE 阶段模块文档
+└── _appendix/ # INTEGRATE 阶段附录
+ ├── appendix-B-permission-matrix.md
+ ├── appendix-C-AI-auto-decisions.md
+ ├── appendix-D-snake-flows.md
+ └── appendix-E-evidence-index.md
 ```
 
 **最终交付物**（`{项目名} 用户操作手册.md`）输出到**项目根目录**，不在 `.agent/harness/` 下。
@@ -338,7 +338,7 @@ AI 会把用户给出的偏好写入 baton.custom_preferences 对象，在 WRITE
 - **不自动覆盖旧手册**：新运行会完整产出，旧手册不会被自动删除
 - **同路径覆盖**：如果直接运行完整流程，同项目路径下的产物会被覆盖
 - **接力棒重置**：新项目路径下没有接力棒时，从 START 开始
-- **⚠️ 多 Skill 并行冲突（平台级约定）**：ManualGen、scout、parse 等 harness 型 Skill **共用** `{项目路径}/.agent/harness/_baton.json` 命名空间。**同一项目请勿并行运行多个 harness 型 Skill**，否则会互相覆盖接力棒导致断点错乱。若必须先后使用，务必在切换 Skill 前将接力棒归档（改名保存），或使用不同项目目录。这是平台 harness 共享区约定，非 ManualGen 缺陷。
+- ** 多 Skill 并行冲突（平台级约定）**：ManualGen、scout、parse 等 harness 型 Skill **共用** `{项目路径}/.agent/harness/_baton.json` 命名空间。**同一项目请勿并行运行多个 harness 型 Skill**，否则会互相覆盖接力棒导致断点错乱。若必须先后使用，务必在切换 Skill 前将接力棒归档（改名保存），或使用不同项目目录。这是平台 harness 共享区约定，非 ManualGen 缺陷。
 
 ### 相关
 - 相关阶段：START（全阶段）

@@ -14,12 +14,12 @@
 ### 0.1 用户首次激活 ManualGen
 ```
 Step 0: 入口清单
-  a. 确定 project_root（上下文给出的项目目录，如果用户没给就取 ide.openRoots[0] 或报错）
-  b. 读 existing baton（.agent/harness/_baton.json）
-  c. 若 baton 不存在 → 初始化 START；meta.is_running=1（全流程托管，AI 自主，无 manual_mode 概念）
-  d. 输出一行启动信息 + 状态（不输出大段解释）：
-     「📘 ManualGen v6.1 已激活 | 项目: <project_root> | 当前阶段: START | 模式: 全流程托管（AI自主，无用户确认环节）」
-  e. 立即 Step 1
+ a. 确定 project_root（上下文给出的项目目录，如果用户没给就取 ide.openRoots[0] 或报错）
+ b. 读 existing baton（.agent/harness/_baton.json）
+ c. 若 baton 不存在 → 初始化 START；meta.is_running=1（全流程托管，AI 自主，无 manual_mode 概念）
+ d. 输出一行启动信息 + 状态（不输出大段解释）：
+ 「ManualGen v6.2 已激活 | 项目: <project_root> | 当前阶段: START | 模式: 全流程托管（AI自主，无用户确认环节）」
+ e. 立即 Step 1
 ```
 
 ### 0.2 用户中途激活（baton 存在且非 DONE / FAILED）
@@ -28,7 +28,7 @@ a. 直接读 baton 恢复到 meta.state
 b. 若 meta.state ∈ L0~L5 → 从 baton.layers[Lx].current_batch + 1 继续跑
 c. 若 baton.meta.sub_state=="BACKFILLING" → 从回灌断点继续
 d. 若 meta.state=AUTO_REVIEW 但 _auto_review_complete 标记存在 → 直接推进下一阶段（避免重复审）
-e. 输出一行：「📘 ManualGen v6.1 已从断点恢复 | 阶段: <meta.state> | 进度: <简要百分比>」
+e. 输出一行：「ManualGen v6.2 已从断点恢复 | 阶段: <meta.state> | 进度: <简要百分比>」
 ```
 
 ---
@@ -60,15 +60,15 @@ e. 输出一行：「📘 ManualGen v6.1 已从断点恢复 | 阶段: <meta.stat
 ### 1.1 GAP → AUTO_REVIEW 的分支（全自主·不询问用户）
 ```
 GAP_ANALYSIS 后：
-  if 触发"模块级回灌条件"（chunk-09 §四 表）
-    → {
-      记录 "gap_backfill_decision": {...} 到 _gap_analysis.md 末尾
-      meta.state = 对应回灌起始层（通常 L2/L3/L5 某层）
-      sub_state = BACKFILLING
-      调度 Skeleton-Agent 局部补跑 → 补跑完 → GRAPH(增量) → 再次 GAP
-    }
-  else
-    → 正常推进 AUTO_REVIEW
+ if 触发"模块级回灌条件"（chunk-09 §四 表）
+ → {
+ 记录 "gap_backfill_decision": {...} 到 _gap_analysis.md 末尾
+ meta.state = 对应回灌起始层（通常 L2/L3/L5 某层）
+ sub_state = BACKFILLING
+ 调度 Skeleton-Agent 局部补跑 → 补跑完 → GRAPH(增量) → 再次 GAP
+ }
+ else
+ → 正常推进 AUTO_REVIEW
 ```
 
 ---
@@ -77,32 +77,32 @@ GAP_ANALYSIS 后：
 
 ```
 当 meta.state ∈ {L0..L5}:
-  2.1 按 chunk-index.yaml 加载 chunk-01 + 06 + chunk07§对应节
-  2.2 按 chunk07§Lx 定义的批次 size 切批
-  2.3 调 Skeleton-Agent.run_layer(layer_tag, batches, batch_size):
-      → Skeleton 内部每批：
-          - 加载批最小上下文源码
-          - 调 NodeWeaver-Agent.process_batch() 执行 AI 抽节点
-          - 写 _kb/Lx_*/*.json（原子写）
-          - run_gate_Lx 质量门
-          - 更新 baton.layers.Lx.*（含从 baton.counters 取号的 ID 分配）
-  2.4 若 Skeleton 上报 missing_upstream →
-      → 主控立即调 incremental_backfill(missing_scope: Chunk-09 §二)
-      → 等回灌完成 → 恢复 Skeleton 当前批
-  2.5 当前层完成 → 更新 baton.meta.state = 下一层
-  2.6 卸载 chunk07 过期节（如已跑 L2，卸载 §L0 §L1）+ 触发全局 save_baton
+ 2.1 按 chunk-index.yaml 加载 chunk-01 + 06 + chunk07§对应节
+ 2.2 按 chunk07§Lx 定义的批次 size 切批
+ 2.3 调 Skeleton-Agent.run_layer(layer_tag, batches, batch_size):
+ → Skeleton 内部每批：
+ - 加载批最小上下文源码
+ - 调 NodeWeaver-Agent.process_batch() 执行 AI 抽节点
+ - 写 _kb/Lx_*/*.json（原子写）
+ - run_gate_Lx 质量门
+ - 更新 baton.layers.Lx.*（含从 baton.counters 取号的 ID 分配）
+ 2.4 若 Skeleton 上报 missing_upstream →
+ → 主控立即调 incremental_backfill(missing_scope: Chunk-09 §二)
+ → 等回灌完成 → 恢复 Skeleton 当前批
+ 2.5 当前层完成 → 更新 baton.meta.state = 下一层
+ 2.6 卸载 chunk07 过期节（如已跑 L2，卸载 §L0 §L1）+ 触发全局 save_baton
 ```
 
 ### 2.1 批间不可丢的计数器
 ```
-baton.counters: {   // 字段名与 baton-protocol schema 完全一致（00-master 唯一维护，只增不减）
-  module_id: 0,     // 下一个全局 MODULE id（MOD_001）
-  page_id: 0,       // 下一个全局 PAGE id（PAGE_001）
-  region_id: 0,     // 下一个全局 REGION id（REG_001）
-  function_id: 0,   // 下一个全局 FUNCTION id（FN_001）
-  entity_id: 0,     // 下一个全局 ENTITY id（ENT_001）
-  step_id: 0,       // 下一个全局 STEP id（STEP_001）
-  element_id: 0     // 下一个全局 ELEMENT id（ELEM_001）
+baton.counters: { // 字段名与 baton-protocol schema 完全一致（00-master 唯一维护，只增不减）
+ module_id: 0, // 下一个全局 MODULE id（MOD_001）
+ page_id: 0, // 下一个全局 PAGE id（PAGE_001）
+ region_id: 0, // 下一个全局 REGION id（REG_001）
+ function_id: 0, // 下一个全局 FUNCTION id（FN_001）
+ entity_id: 0, // 下一个全局 ENTITY id（ENT_001）
+ step_id: 0, // 下一个全局 STEP id（STEP_001）
+ element_id: 0 // 下一个全局 ELEMENT id（ELEM_001）
 }
 ```
 → Skeleton 每批写入前先从 baton.counters 取一段区间号，写回后更新该计数器。**禁止跨批 ID 重复**。
@@ -113,19 +113,19 @@ baton.counters: {   // 字段名与 baton-protocol schema 完全一致（00-mast
 
 ```
 meta.state = GRAPH_BUILD:
-  3.1 加载 chunk-01 + 06 + chunk-08（全部）
-  3.2 判断模式：
-        - 首次进入 baton.graph.graph_builds==0 → mode=FULL
-        - baton.graph.graph_builds>0 & dirty 存在 → mode=INCREMENTAL
-  3.3 调 GraphBuilder-Agent.run(mode, dirty_node_ids, dirty_file_globs)
-      → 内部 Step3 自动调 EntityAligner-Agent 做对齐
-  3.4 GraphBuilder 返回 graph_quality.json + flags
-      若 flags 含 HIGH_LOW_CONFIDENCE_RATE 且 baton.rework.graph_retries<2：
-         → 把 suggest_backfill_scopes 记录下来，在 GAP 阶段用（不立即回灌）
-         → baton.rework.graph_retries += 1
-  3.5 baton.graph.graph_builds += 1
-  3.6 卸载 chunk-08（节省上下文）
-  3.7 推进 GAP_ANALYSIS
+ 3.1 加载 chunk-01 + 06 + chunk-08（全部）
+ 3.2 判断模式：
+ - 首次进入 baton.graph.graph_builds==0 → mode=FULL
+ - baton.graph.graph_builds>0 & dirty 存在 → mode=INCREMENTAL
+ 3.3 调 GraphBuilder-Agent.run(mode, dirty_node_ids, dirty_file_globs)
+ → 内部 Step3 自动调 EntityAligner-Agent 做对齐
+ 3.4 GraphBuilder 返回 graph_quality.json + flags
+ 若 flags 含 HIGH_LOW_CONFIDENCE_RATE 且 baton.rework.graph_retries<2：
+ → 把 suggest_backfill_scopes 记录下来，在 GAP 阶段用（不立即回灌）
+ → baton.rework.graph_retries += 1
+ 3.5 baton.graph.graph_builds += 1
+ 3.6 卸载 chunk-08（节省上下文）
+ 3.7 推进 GAP_ANALYSIS
 ```
 
 ---
@@ -134,18 +134,18 @@ meta.state = GRAPH_BUILD:
 
 ```
 meta.state = AUTO_REVIEW:
-  4.1 加载 chunk-01 + 06 + chunk07§自主裁决
-  4.2 读取 graph/_nodes.json 中 confidence<0.7 的所有节点
-      + graph/_snakes.json 中 incomplete_snake=true 的蛇
-      + FUNCTION.preconditions.roles 中 coverage<60% 的模块权限
-      + ENTITY.fields 中 validation 缺失 ≥ 40% 的实体
-  4.3 对每一类分别按 chunk07§自主裁决 的规则 AI 自主处理
-      → 结果每条写一行到 `_kb/_auto_decisions.md`（时间戳 + 裁决类型 + 决策 + 依据）
-  4.4 对"AI也不确定"但仍可继续的节点 → 写 graph/_nodes.json.meta.requires_human_review=true
-      （文档中对应节点用 ⚠️ 标注，不阻塞全局推进）
-  4.5 写 `_auto_review_complete` 标记文件，防止激活恢复时重复审
-  4.6 graph.graph_quality_score = avg(各层 layers[Lx].quality_score) // 写入 schema 的 graph_quality_score 字段
-  4.7 推进 RESOLVE
+ 4.1 加载 chunk-01 + 06 + chunk07§自主裁决
+ 4.2 读取 graph/_nodes.json 中 confidence<0.7 的所有节点
+ + graph/_snakes.json 中 incomplete_snake=true 的蛇
+ + FUNCTION.preconditions.roles 中 coverage<60% 的模块权限
+ + ENTITY.fields 中 validation 缺失 ≥ 40% 的实体
+ 4.3 对每一类分别按 chunk07§自主裁决 的规则 AI 自主处理
+ → 结果每条写一行到 `_kb/_auto_decisions.md`（时间戳 + 裁决类型 + 决策 + 依据）
+ 4.4 对"AI也不确定"但仍可继续的节点 → 写 graph/_nodes.json.meta.requires_human_review=true
+ （文档中对应节点用 警告 标注，不阻塞全局推进）
+ 4.5 写 `_auto_review_complete` 标记文件，防止激活恢复时重复审
+ 4.6 graph.graph_quality_score = avg(各层 layers[Lx].quality_score) // 写入 schema 的 graph_quality_score 字段
+ 4.7 推进 RESOLVE
 ```
 
 ### 用户主动追问"现在怎么样了" → 暂停 & 仪表盘
@@ -160,29 +160,29 @@ v5 的 CONFIRM 已取消（避免用户决策），但**保留用户主动触发
 
 ```
 meta.state = WRITE:
-  5.1 加载 chunk-01 + 06 + chunk04§WRITE + flowchart-spec
-  5.2 读 graph/_layer_index.json 的 module_id 列表
-  5.3 若 WRITE 是 JUDGE 打回后触发的"模块级重写" → 只从 baton.rework.write_rerun_modules 取模块列表
-  5.4 每 2~3 个模块并行拉起 Module-Writer-Agent v6（见 §5.1）：
-        - 每个子 Agent 只读取：自己模块的 graph 节点 + 相关 Snake（跨模块但被本模块节点引用的）
-        - 上下文隔离（子 Agent 间互相看不到，避免互相干扰）
-        - 输出：`output_user_manual/_modules/MOD_xxx.md`
-  5.5 所有模块写回后，主控检查每个模块文件存在且内容≥4KB（不允许空壳模块）
-      → 不合格模块标记，交由 REFINE 后若仍不合格则 TODO_RESOLVE 阶段修
-  5.6 推进 REFINE
+ 5.1 加载 chunk-01 + 06 + chunk04§WRITE + flowchart-spec
+ 5.2 读 graph/_layer_index.json 的 module_id 列表
+ 5.3 若 WRITE 是 JUDGE 打回后触发的"模块级重写" → 只从 baton.rework.write_rerun_modules 取模块列表
+ 5.4 每 2~3 个模块并行拉起 Module-Writer-Agent v6（见 §5.1）：
+ - 每个子 Agent 只读取：自己模块的 graph 节点 + 相关 Snake（跨模块但被本模块节点引用的）
+ - 上下文隔离（子 Agent 间互相看不到，避免互相干扰）
+ - 输出：`output_user_manual/_modules/MOD_xxx.md`
+ 5.5 所有模块写回后，主控检查每个模块文件存在且内容≥4KB（不允许空壳模块）
+ → 不合格模块标记，交由 REFINE 后若仍不合格则 TODO_RESOLVE 阶段修
+ 5.6 推进 REFINE
 ```
 
 ### 5.1 Module-Writer-Agent v6（从 graph 查询，不再读 _extraction）
 ```
 对单个 MOD_xxx：
-  输入：graph/_nodes.json 中 module_id=MOD_xxx 的所有节点 + 相关 triples + 相关 snakes
-  按以下结构写 MD（和 SKILL.md §产物体系一致）：
-    1. 模块概述（名称/入口页面/角色权限矩阵）
-    2. 功能列表（每个 FUNCTION → 子章节：功能说明 / 操作步骤（STEP表） / 权限要求 / 字段说明表 / 校验规则 / 异常处理）
-    3. 页面操作指南（PAGE 按 REGION 拆写 + ELEMENT 按钮表）
-    4. 流程图（页面流程 + Snake 片段跨模块流程）
-  引用来源：每段内容在文末写「信息依据」（evidence IDs，不再显示代码片段，但可反向追溯）
-  置信度标注：confidence < 0.7 的段落加 ⚠️ 前缀说明
+ 输入：graph/_nodes.json 中 module_id=MOD_xxx 的所有节点 + 相关 triples + 相关 snakes
+ 按以下结构写 MD（和 SKILL.md §产物体系一致）：
+ 1. 模块概述（名称/入口页面/角色权限矩阵）
+ 2. 功能列表（每个 FUNCTION → 子章节：功能说明 / 操作步骤（STEP表） / 权限要求 / 字段说明表 / 校验规则 / 异常处理）
+ 3. 页面操作指南（PAGE 按 REGION 拆写 + ELEMENT 按钮表）
+ 4. 流程图（页面流程 + Snake 片段跨模块流程）
+ 引用来源：每段内容在文末写「信息依据」（evidence IDs，不再显示代码片段，但可反向追溯）
+ 置信度标注：confidence < 0.7 的段落加 警告 前缀说明
 ```
 
 ---
@@ -191,15 +191,15 @@ meta.state = WRITE:
 
 ```
 JUDGE 盲审返回 per_module_scores 后：
-  6.1 模块 score ≥70 → 写入 REFINE_PASS，不动
-  6.2 模块 score <70 & rework.stage_retries["WRITE:MOD_xxx"] <3
-       → 调用 chunk09 §三 局部重做算法
-       → baton.rework.stage_retries["WRITE:MOD_xxx"] +=1
-       → baton.rework.write_rerun_modules = [不合格模块列表]
-       → meta.state = WRITE 再次跑（注意 5.3 只写这些模块！）
-  6.3 模块 score <70 & 重试≥3
-       → 写入 _kb/_auto_decisions.md + 最终文档该模块末尾加⚠️提示
-       → 不阻塞 DONE（全局推进）
+ 6.1 模块 score ≥70 → 写入 REFINE_PASS，不动
+ 6.2 模块 score <70 & rework.stage_retries["WRITE:MOD_xxx"] <3
+ → 调用 chunk09 §三 局部重做算法
+ → baton.rework.stage_retries["WRITE:MOD_xxx"] +=1
+ → baton.rework.write_rerun_modules = [不合格模块列表]
+ → meta.state = WRITE 再次跑（注意 5.3 只写这些模块！）
+ 6.3 模块 score <70 & 重试≥3
+ → 写入 _kb/_auto_decisions.md + 最终文档该模块末尾加警告提示
+ → 不阻塞 DONE（全局推进）
 ```
 
 ---
@@ -209,7 +209,7 @@ JUDGE 盲审返回 per_module_scores 后：
 | 异常 | 处理 |
 |------|------|
 | 某层某批连续 3 次质量门不通过 | 写 warning → 后续 GAP / AUTO_REVIEW / TODO 阶段去修，不阻塞推进 |
-| 同一 LAYER+MODULE 回灌 ≥3 次 | 判定"确实缺实现或读不到" → 模块最终加⚠️ → 不继续尝试 |
+| 同一 LAYER+MODULE 回灌 ≥3 次 | 判定"确实缺实现或读不到" → 模块最终加 → 不继续尝试 |
 | GRAPH Step7 落盘失败（磁盘满等） | 重试 2 次；仍失败 → 立即输出状态+错误+baton 路径 → FAILED 等用户处理 |
 | 激活时 baton.meta.state == FAILED | 读 last_blocker → 从阻断阶段前开始（不从头来） |
 | 用户中途说「停/取消/退出」 | 立即 save_baton + 输出断点恢复说明，不做 FAILED 标记 |

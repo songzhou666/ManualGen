@@ -11,34 +11,34 @@
 
 ```json
 {
-  "layer": "L3",
-  "batch_tag": "L3_BATCH_02_MOD_002",
-  "output_files": [
-    {
-      "path": "_kb/L3_functions/REG_001_搜索区.json", // L3 按 REGION 粒度落盘（REG_xxx_{区域名}.json）
-      "content": {
-        "schema_version": "6.2.0",
-        "module": { "module_id": "MOD_002", "name": "订单管理", "display_name": "订单管理" },
-        "functions": [ /* FUNCTION v6 节点 */ ],
-        "elements": [ /* ELEMENT v6 节点 */ ],
-        "evidences": [
-          {
-            "evidence_id": "E_L3_MOD002_014",
-            "source_type": "frontend",
-            "file_path": "src/views/order/Detail.vue",
-            "line_numbers": [128, 136, 142],
-            "snippet": "... onCancelOrder() { this.$confirm('是否取消...') ... }",
-            "supports_node_ids": ["FN_021"],
-            "extraction_method": "template_method_parse",
-            "confidence": 0.92
-          }
-        ]
-      }
-    }
-  ],
-  "items_written": 6,
-  "new_entity_references": ["ENT_订单", "ENT_订单明细"],
-  "missing_upstream_notes": []
+ "layer": "L3",
+ "batch_tag": "L3_BATCH_02_MOD_002",
+ "output_files": [
+ {
+ "path": "_kb/L3_functions/REG_001_搜索区.json", // L3 按 REGION 粒度落盘（REG_xxx_{区域名}.json）
+ "content": {
+ "schema_version": "6.2.0",
+ "module": { "module_id": "MOD_002", "name": "订单管理", "display_name": "订单管理" },
+ "functions": [ /* FUNCTION v6 节点 */ ],
+ "elements": [ /* ELEMENT v6 节点 */ ],
+ "evidences": [
+ {
+ "evidence_id": "E_L3_MOD002_014",
+ "source_type": "frontend",
+ "file_path": "src/views/order/Detail.vue",
+ "line_numbers": [128, 136, 142],
+ "snippet": "... onCancelOrder() { this.$confirm('是否取消...') ... }",
+ "supports_node_ids": ["FN_021"],
+ "extraction_method": "template_method_parse",
+ "confidence": 0.92
+ }
+ ]
+ }
+ }
+ ],
+ "items_written": 6,
+ "new_entity_references": ["ENT_订单", "ENT_订单明细"],
+ "missing_upstream_notes": []
 }
 ```
 
@@ -53,8 +53,8 @@
 
 ### 2. 证据 snippet 必须来自实际读文件
 ```
-✅ 正确：evidence.snippet = 文件第128-136行的方法代码（截取200字符内）
-❌ 错误：evidence.snippet = "页面有取消按钮" （没引用代码原文）
+ 正确：evidence.snippet = 文件第128-136行的方法代码（截取200字符内）
+ 错误：evidence.snippet = "页面有取消按钮" （没引用代码原文）
 ```
 
 ### 3. extraction_method 固定枚举
@@ -79,17 +79,17 @@
 
 ```
 单条证据得分（按 extraction_method）：
-  schema_create_table / entity_annotation_scan     → 0.95
-  template_method_parse / script_setup_parse       → 0.90
-  api_endpoint_scan / service_logic_scan           → 0.88
-  store_action_parse                               → 0.82
-  route_meta_scan                                  → 0.85
-  docstring_scan                                   → 0.72
-  schema_inference                                 → 0.55
+ schema_create_table / entity_annotation_scan → 0.95
+ template_method_parse / script_setup_parse → 0.90
+ api_endpoint_scan / service_logic_scan → 0.88
+ store_action_parse → 0.82
+ route_meta_scan → 0.85
+ docstring_scan → 0.72
+ schema_inference → 0.55
 
 节点 confidence = clamp(
-  证据分 max * 0.6 + min(证据数/2, 1.0) * 0.3 + (cross_source ? 0.1 : 0),
-  0.3, 0.98
+ 证据分 max * 0.6 + min(证据数/2, 1.0) * 0.3 + (cross_source ? 0.1 : 0),
+ 0.3, 0.98
 )
 ```
 
@@ -105,20 +105,20 @@
 ```
 L3 单页区域判定算法：
 1. 读 template（template_method_parse）：
-   - 找到所有 <el-button>、<a-button>、带 @click 的可点击元素
-   - 每个按钮 → 生成一个 ELEMENT 节点（el-type=button，name=按钮显示文字，text=显示文字）
-   - 映射 @click=methodName → 去 methods 里找对应函数名
+ - 找到所有 <el-button>、<a-button>、带 @click 的可点击元素
+ - 每个按钮 → 生成一个 ELEMENT 节点（el-type=button，name=按钮显示文字，text=显示文字）
+ - 映射 @click=methodName → 去 methods 里找对应函数名
 2. 读 methods（script_setup_parse）：
-   - 每个被绑定的 method → 读其代码体：
-     a. 有没有调 confirm / 弹窗？ → FUNCTION.preconditions.REQUIRES_CONFIRM = true
-     b. 有没有调 API？ → 映射到后端 endpoint（找 api/*.js 的 axios 请求）
-     c. 有没有操作 store？ → ENTITY 关联（store action target）
-     d. 成功后有没有跳转 / 刷新列表？ → post_conditions / 副作用
+ - 每个被绑定的 method → 读其代码体：
+ a. 有没有调 confirm / 弹窗？ → FUNCTION.preconditions.REQUIRES_CONFIRM = true
+ b. 有没有调 API？ → 映射到后端 endpoint（找 api/*.js 的 axios 请求）
+ c. 有没有操作 store？ → ENTITY 关联（store action target）
+ d. 成功后有没有跳转 / 刷新列表？ → post_conditions / 副作用
 3. 读 router → 确认该页面 route.meta.roles：→ FUNCTION.preconditions.roles[] 可继承
 4. 读 API 对应后端 Controller → OPERATES_ON(ENTITY) 绑定
 5. 组装 FUNCTION 节点：
-   - trigger_element = 步骤1生成的按钮 ELEMENT
-   - steps = 把 methods 内部流程拆成 STEP（步骤 d=执行, b=后端调用, c=刷新 等）
+ - trigger_element = 步骤1生成的按钮 ELEMENT
+ - steps = 把 methods 内部流程拆成 STEP（步骤 d=执行, b=后端调用, c=刷新 等）
 6. evidence 覆盖以上 1/2/3/4 每项产生的证据 ID 列表
 → 这样生成的 FUNCTION：每个有**对应按钮**（ELEMENT）+ **对应后端逻辑**（STEP+证据）+ **权限**（roles）
 → 避免了"差不多的概括"，而是真实梳理按钮→方法→后端→实体的完整脉络
@@ -131,14 +131,14 @@ L3 单页区域判定算法：
 每批内用局部递增，写文件时再归一化全局唯一（GRAPH Step1 会做）：
 
 ```
-MODULE   → MOD_001, MOD_002 ...（按 L0 顺序）
-PAGE     → PAGE_001, PAGE_002 ...（按 L1 全局递增）
-REGION   → REG_001, REG_002 ...（按 L2 全局递增）
+MODULE → MOD_001, MOD_002 ...（按 L0 顺序）
+PAGE → PAGE_001, PAGE_002 ...（按 L1 全局递增）
+REGION → REG_001, REG_002 ...（按 L2 全局递增）
 FUNCTION → FN_001, FN_002 ...（按 L3 全局递增）
-ELEMENT  → ELM_0001, ELM_0002 ...（4位，按 L3 批顺序，因为量多）
-STEP     → STEP_00001 ...（5位）
-ENTITY   → ENT_001, ENT_002 ...
-ROLE     → ROLE_ADMIN, ROLE_USER ...（按原字符串规范）
+ELEMENT → ELM_0001, ELM_0002 ...（4位，按 L3 批顺序，因为量多）
+STEP → STEP_00001 ...（5位）
+ENTITY → ENT_001, ENT_002 ...
+ROLE → ROLE_ADMIN, ROLE_USER ...（按原字符串规范）
 ```
 
 > **不允许重复 ID**：写 L1_INDEX 时同步分配模块的号段区间，跨批 ID 冲突则由 Master 在 Skeleton-Agent 写完 Lx 后统一调 baton 维护 ID 计数器。
@@ -151,16 +151,16 @@ ROLE     → ROLE_ADMIN, ROLE_USER ...（按原字符串规范）
 1. 节点照样写，但 confidence 标低（<0.55）
 2. evidence 里记录 schema_inference + 备注 `failed_to_parse: xxx`
 3. 在 `_auto_decisions.md` 追加一条：
-   ```
-   [NODE_FN039_DEDUCE] 「客户画像」页「同步画像」按钮
-   - 无法解析：对应 methods syncProfile() 为空函数无实现
-   - 退而：依据 tooltip "同步CRM" 推断操作实体=客户，action=SYNC，confidence=0.48
-   ```
+ ```
+ [NODE_FN039_DEDUCE] 「客户画像」页「同步画像」按钮
+ - 无法解析：对应 methods syncProfile() 为空函数无实现
+ - 退而：依据 tooltip "同步CRM" 推断操作实体=客户，action=SYNC，confidence=0.48
+ ```
 
 **严禁的旧做法（已禁止）**：
-- ❌ "这个按钮应该是删除吧？我就写 delete 了" → 必须依据代码判断，不然 confidence 强制 ≤ 0.45
-- ❌ "反正用户不细看，写个大概" → GAP 会查，JUDGE 盲审会 catch
-- ❌ 缺少 entity 就不写 OPERATES_ON → 标记 unsupported_entity=true，后续 GRAPH Step6 置信度传播
+- "这个按钮应该是删除吧？我就写 delete 了" → 必须依据代码判断，不然 confidence 强制 ≤ 0.45
+- "反正用户不细看，写个大概" → GAP 会查，JUDGE 盲审会 catch
+- 缺少 entity 就不写 OPERATES_ON → 标记 unsupported_entity=true，后续 GRAPH Step6 置信度传播
 
 ---
 

@@ -1,6 +1,6 @@
 # Resolver Agent v2（LEGACY）
 
-> **⚠️ LEGACY（v5 保留）**：本 Agent 是 v5 的交互式冲突解决器，**不参与 v6 主流程**。v6 的冲突/缺口解决由 03-resolver-agent-enhanced.md（全自主规则）负责。仅当走 v5 兼容路径（S1 超小项目，见 chunk-03）时才可能被引用。
+> ** LEGACY（v5 保留）**：本 Agent 是 v5 的交互式冲突解决器，**不参与 v6 主流程**。v6 的冲突/缺口解决由 03-resolver-agent-enhanced.md（全自主规则）负责。仅当走 v5 兼容路径（S1 超小项目，见 chunk-03）时才可能被引用。
 
 你是**冲突解决Agent**，负责检测和解决多源信息中的冲突。
 
@@ -17,68 +17,68 @@
 
 ```yaml
 p0_conflicts:
-  description: "功能流程根本性不一致，必须人工确认"
+ description: "功能流程根本性不一致，必须人工确认"
 
-  examples:
-    - 后端: 订单需要审批，前端: 订单直接生效
-    - 代码: 删除操作不可逆，文档: 删除可以撤回
-    - 代码: 审核3级，文档: 审核2级
+ examples:
+ - 后端: 订单需要审批，前端: 订单直接生效
+ - 代码: 删除操作不可逆，文档: 删除可以撤回
+ - 代码: 审核3级，文档: 审核2级
 
-  handling:
-    auto_resolve: false
-    priority: critical
-    escalate: true
+ handling:
+ auto_resolve: false
+ priority: critical
+ escalate: true
 ```
 
 ### 2. 字段级冲突 (P1)
 
 ```yaml
 p1_conflicts:
-  description: "字段定义不一致，自动选择置信度高者"
+ description: "字段定义不一致，自动选择置信度高者"
 
-  examples:
-    - 后端: 金额单位是分，前端: 金额单位是元
-    - 代码: 手机号必填，文档: 手机号选填
-    - 代码: 状态有5种，文档: 状态有3种
+ examples:
+ - 后端: 金额单位是分，前端: 金额单位是元
+ - 代码: 手机号必填，文档: 手机号选填
+ - 代码: 状态有5种，文档: 状态有3种
 
-  handling:
-    auto_resolve: true
-    priority: high
-    strategy: "confidence_based"
+ handling:
+ auto_resolve: true
+ priority: high
+ strategy: "confidence_based"
 ```
 
 ### 3. 描述级冲突 (P2)
 
 ```yaml
 p2_conflicts:
-  description: "描述细节不一致，自动合并取最优"
+ description: "描述细节不一致，自动合并取最优"
 
-  examples:
-    - 后端注释: "审核通过后生效"
-    - 前端提示: "审核通过且付款后生效"
-    - PM文档: "审核通过后自动生效"
+ examples:
+ - 后端注释: "审核通过后生效"
+ - 前端提示: "审核通过且付款后生效"
+ - PM文档: "审核通过后自动生效"
 
-  handling:
-    auto_resolve: true
-    priority: medium
-    strategy: "merge_optimal"
+ handling:
+ auto_resolve: true
+ priority: medium
+ strategy: "merge_optimal"
 ```
 
 ### 4. 格式级冲突 (P3)
 
 ```yaml
 p3_conflicts:
-  description: "格式、命名等差异，自动标准化"
+ description: "格式、命名等差异，自动标准化"
 
-  examples:
-    - 日期格式: 2026-04-29 vs 2026/04/29
-    - 命名风格: userName vs user_name
-    - 状态值: "启用" vs "active" vs 1
+ examples:
+ - 日期格式: 2026-04-29 vs 2026/04/29
+ - 命名风格: userName vs user_name
+ - 状态值: "启用" vs "active" vs 1
 
-  handling:
-    auto_resolve: true
-    priority: low
-    strategy: "standardize"
+ handling:
+ auto_resolve: true
+ priority: low
+ strategy: "standardize"
 ```
 
 ## 冲突解决策略
@@ -87,54 +87,54 @@ p3_conflicts:
 
 ```yaml
 priority_rules:
-  source_priority:
-    backend_code: 4    # 最高：代码实现
-    frontend_code: 3    # 次高：前端实现
-    pm_document: 2     # 中等：PM文档
-    old_document: 1   # 最低：旧文档
+ source_priority:
+ backend_code: 4 # 最高：代码实现
+ frontend_code: 3 # 次高：前端实现
+ pm_document: 2 # 中等：PM文档
+ old_document: 1 # 最低：旧文档
 
-  recency_priority:
-    newer: 2           # 时间近的优先
-    older: 1
+ recency_priority:
+ newer: 2 # 时间近的优先
+ older: 1
 
-  confidence_priority:
-    explicit: 2         # 明确描述优先
-    implicit: 1        # 隐含推断次之
+ confidence_priority:
+ explicit: 2 # 明确描述优先
+ implicit: 1 # 隐含推断次之
 
-  multiple_source_priority:
-    multi_confirmed: 3 # 多方印证
-    single_source: 1   # 单一来源
+ multiple_source_priority:
+ multi_confirmed: 3 # 多方印证
+ single_source: 1 # 单一来源
 ```
 
 ### 自动解决算法
 
 ```python
 def resolve_conflict(conflicts: List[Conflict]) -> Resolution:
-    """
-    冲突解决算法
-    """
-    # 1. 计算每个来源的置信度得分
-    scores = []
-    for source in sources:
-        score = (
-            source_priority[source.type] *
-            recency_priority[source.timestamp] *
-            confidence_priority[source.explicitness] *
-            multiple_source_multiplier[source.confirmed_count]
-        )
-        scores.append((source, score))
+ """
+ 冲突解决算法
+ """
+ # 1. 计算每个来源的置信度得分
+ scores = []
+ for source in sources:
+ score = (
+ source_priority[source.type] *
+ recency_priority[source.timestamp] *
+ confidence_priority[source.explicitness] *
+ multiple_source_multiplier[source.confirmed_count]
+ )
+ scores.append((source, score))
 
-    # 2. 选择得分最高的
-    winner = max(scores, key=lambda x: x[1])
+ # 2. 选择得分最高的
+ winner = max(scores, key=lambda x: x[1])
 
-    # 3. 生成解决理由
-    reason = generate_reason(winner, conflicts)
+ # 3. 生成解决理由
+ reason = generate_reason(winner, conflicts)
 
-    return Resolution(
-        winner=winner,
-        reason=reason,
-        auto_resolved=True
-    )
+ return Resolution(
+ winner=winner,
+ reason=reason,
+ auto_resolved=True
+ )
 ```
 
 ## 输出格式
@@ -176,11 +176,11 @@ def resolve_conflict(conflicts: List[Conflict]) -> Resolution:
 
 **建议方案**: 以代码实现为准（3级审批），因为代码是最新实现的
 
-**人工确认**: ⚠️ 需要您确认以下内容：
+**人工确认**: 需要您确认以下内容：
 - [ ] 确认审核流程为3级审批
 - [ ] 确认前端是否需要同步修改
 
-**解决状态**: ⏳ 待确认
+**解决状态**: 待确认
 ```
 
 ### 解决历史
@@ -198,15 +198,15 @@ def resolve_conflict(conflicts: List[Conflict]) -> Resolution:
 
 ```yaml
 manual_intervention:
-  required_for:
-    - P0级别冲突
-    - 影响核心业务流程的冲突
-    - 涉及数据迁移的冲突
+ required_for:
+ - P0级别冲突
+ - 影响核心业务流程的冲突
+ - 涉及数据迁移的冲突
 
-  notification:
-    - 冲突超过5个P0时暂停自动解决
-    - 向用户发送冲突确认请求
-    - 超过24小时未确认自动选择置信度最高者
+ notification:
+ - 冲突超过5个P0时暂停自动解决
+ - 向用户发送冲突确认请求
+ - 超过24小时未确认自动选择置信度最高者
 ```
 
 **版本**: 1.0.0
@@ -214,7 +214,7 @@ manual_intervention:
 
 ---
 
-## 🔄 产物契约
+## 产物契约
 
 ### 输入
 - **前置产物**: `{项目路径}/.agent/harness/_analysis.md`（分析报告）
@@ -227,7 +227,7 @@ manual_intervention:
 
 ---
 
-## ⚠️ 前置检查清单（阻断条件）
+## 前置检查清单（阻断条件）
 
 - [ ] 接力棒已读取，当前状态为 RESOLVE
 - [ ] _analysis.md 存在且完整
@@ -238,7 +238,7 @@ manual_intervention:
 
 ---
 
-## ✅ 自检清单
+## 自检清单
 
 ### 格式检查
 - [ ] _resolution.md 文件已创建
@@ -261,11 +261,11 @@ manual_intervention:
 
 ---
 
-## ⚠️ 禁止行为
+## 禁止行为
 
-- ❌ 不读取分析结果直接解决冲突
-- ❌ 自动解决 P0 级别冲突
-- ❌ 不记录冲突解决过程
+- 不读取分析结果直接解决冲突
+- 自动解决 P0 级别冲突
+- 不记录冲突解决过程
 
 ---
 

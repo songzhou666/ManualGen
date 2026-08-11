@@ -18,9 +18,9 @@
 
 | 代码 | 含义 |
 |------|------|
-| 🟢 A 级 | ≥3 条不同 source_type 交叉验证一致（cross_verified=true） |
-| 🟡 B 级 | 仅 1-2 种 source_type，但 AUTO_REVIEW 裁决 ACCEPTED 或 INFERRED_␣WARNING |
-| 🔴 C 级 | 仍需人工复核（对应附录 C 第四清单） |
+| A 级 | ≥3 条不同 source_type 交叉验证一致（cross_verified=true） |
+| B 级 | 仅 1-2 种 source_type，但 AUTO_REVIEW 裁决 ACCEPTED 或 INFERRED_WITH_WARNING |
+| C 级 | 仍需人工复核（对应附录 C 第四清单） |
 
 ---
 
@@ -32,10 +32,10 @@
 
 | 证据 ID | source_type | 源文件路径 | 起始行 | 结束行 | 代码片段（摘要，≤80字符） | 等级 |
 |---------|-------------|-----------|:-----:|:-----:|-------------------------|:----:|
-| EV_000121 | frontend_template | frontend/src/views/OrderList.vue | 28 | 31 | `<el-button type="danger" @click="batchDelete">作废</el-button>` | 🟢 |
-| EV_000122 | frontend_script | frontend/src/views/OrderList.vue | 142 | 148 | `batchDelete() { this.$confirm(...) => api.cancelOrder(ids) }` | 🟢 |
-| EV_000123 | backend_controller | backend/routers/order.py | 55 | 60 | `@router.post("/orders/cancel")  def cancel_order(ids: List[str])` | 🟢 |
-| EV_000124 | permission_annotation | backend/routers/order.py | 54 | 54 | `@PreAuthorize("hasRole('ADMIN','OPERATOR')")` | 🟡 |
+| EV_000121 | frontend_template | frontend/src/views/OrderList.vue | 28 | 31 | `<el-button type="danger" @click="batchDelete">作废</el-button>` | A |
+| EV_000122 | frontend_script | frontend/src/views/OrderList.vue | 142 | 148 | `batchDelete() { this.$confirm(...) => api.cancelOrder(ids) }` | A |
+| EV_000123 | backend_controller | backend/routers/order.py | 55 | 60 | `@router.post("/orders/cancel") def cancel_order(ids: List[str])` | A |
+| EV_000124 | permission_annotation | backend/routers/order.py | 54 | 54 | `@PreAuthorize("hasRole('ADMIN','OPERATOR')")` | B |
 
 #### 节点 FN_002：…
 
@@ -81,5 +81,5 @@
 
 ---
 
-**版本**: v6.1-appendix-E
+**版本**: v6.2-appendix-E
 **最后更新**: 2026-08-11

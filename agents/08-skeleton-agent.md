@@ -8,14 +8,14 @@
 
 ## 一、职责边界
 
-✅ 负责：
+ 负责：
 - 每层的批次切分与执行
 - 每批跑完写回对应 `_kb/Lx_*/xxx.json`
 - 每层整体跑完更新 baton.layers.Lx.*
 - 每批跑完立即 run_gate_xx 质量门
 - 遇到下层需上层补节点 → 触发 Incremental Backfill（Chunk-09）（但仅告诉 Master，让Master调度）
 
-❌ 不负责：
+ 不负责：
 - 不做知识图谱构建（GraphBuilder 的活）
 - 不做 WRITE / AUDIT / JUDGE
 - 不主动询问用户（遇决策按默认规则选，记录进 _auto_decisions.md）
@@ -27,46 +27,46 @@
 ```js
 // 伪代码：供 AI 理解执行节奏
 async function run_layer(layer_def) {
-  const batches = split_batches(layer_def.target_items, layer_def.batch_size);
-  // 批总数写入 baton.layers[Lx].<{X}_batches_total>，字段名依层而定：
-  //   L1: modules_batches_total / L2: pages_batches_total / L3: regions_batches_total / L4: functions_batches_total / L5: operations_batches_total
-  baton.layers[Lx].<X_batches_total> = batches.length;
-  let results = [];
-  for (let i = 0; i < batches.length; i++) {
-    const batch = batches[i];
-    // 1. 加载当期批最小上下文（Chunk07§Lx + 当前层index + 本批源码/路由/文件路径）
-    ctx = load_minimal_context(layer_def.section_tag, batch);
-    // 2. 执行AI处理
-    batch_results = await process_batch(batch, layer_def.schema_rules, ctx);
-    // 3. 落盘（按指定路径）
-    for (const r of batch_results.output_files) {
-      atomic_write(r.path, r.content); // 先temp后rename，防止中途崩
-    }
-    // 4. 立即质量门
-    const gate = run_gate(layer_def.gate_name, batch_results);
-    if (!gate.pass) {
-      // 不合格但能补救 → 重跑本批（修正上下文），不阻塞整体
-      if (gate.remedy) {
-        batch_results = await rerun_batch_with_hint(batch, gate.remedy_hint);
-        atomic_write_override(...);
-      } else {
-        // 无法补救 → 标 incomplete 记录，继续下一批
-        batch_results.notes.push("quality_gate_failed_but_continue");
-        _auto_decisions.md 追加 "[BATCH_XX] ... 未过质量门：${gate.fail_reason}, 继续向下"
-      }
-    }
-    // 5. 更新进度
-    baton.layers[Lx].current_batch = i + 1;
-    // 完成计数按层取对应字段累加（L1: modules_completed / L2: regions_completed / L3: functions_completed / L4: operations_completed / L5: fields_documented 等）
-    baton.layers[Lx].<completed字段> += batch_results.items_written;
-    baton.layers[Lx].quality_score = gate.score; // 每批后刷新本层质量分
-    save_baton();  // 每批落盘接力棒，防止崩溃丢失
-    // 6. 上下文回收
-    unload_earlier_layer_sections();
-  }
-  // 层完成 → 更新层级状态与质量
-  baton.layers[Lx].status = "completed"; // not_started | in_progress | completed
-  baton.layers[Lx].quality_score = avg(各批 quality_score);
+ const batches = split_batches(layer_def.target_items, layer_def.batch_size);
+ // 批总数写入 baton.layers[Lx].<{X}_batches_total>，字段名依层而定：
+ // L1: modules_batches_total / L2: pages_batches_total / L3: regions_batches_total / L4: functions_batches_total / L5: operations_batches_total
+ baton.layers[Lx].<X_batches_total> = batches.length;
+ let results = [];
+ for (let i = 0; i < batches.length; i++) {
+ const batch = batches[i];
+ // 1. 加载当期批最小上下文（Chunk07§Lx + 当前层index + 本批源码/路由/文件路径）
+ ctx = load_minimal_context(layer_def.section_tag, batch);
+ // 2. 执行AI处理
+ batch_results = await process_batch(batch, layer_def.schema_rules, ctx);
+ // 3. 落盘（按指定路径）
+ for (const r of batch_results.output_files) {
+ atomic_write(r.path, r.content); // 先temp后rename，防止中途崩
+ }
+ // 4. 立即质量门
+ const gate = run_gate(layer_def.gate_name, batch_results);
+ if (!gate.pass) {
+ // 不合格但能补救 → 重跑本批（修正上下文），不阻塞整体
+ if (gate.remedy) {
+ batch_results = await rerun_batch_with_hint(batch, gate.remedy_hint);
+ atomic_write_override(...);
+ } else {
+ // 无法补救 → 标 incomplete 记录，继续下一批
+ batch_results.notes.push("quality_gate_failed_but_continue");
+ _auto_decisions.md 追加 "[BATCH_XX] ... 未过质量门：${gate.fail_reason}, 继续向下"
+ }
+ }
+ // 5. 更新进度
+ baton.layers[Lx].current_batch = i + 1;
+ // 完成计数按层取对应字段累加（L1: modules_completed / L2: regions_completed / L3: functions_completed / L4: operations_completed / L5: fields_documented 等）
+ baton.layers[Lx].<completed字段> += batch_results.items_written;
+ baton.layers[Lx].quality_score = gate.score; // 每批后刷新本层质量分
+ save_baton(); // 每批落盘接力棒，防止崩溃丢失
+ // 6. 上下文回收
+ unload_earlier_layer_sections();
+ }
+ // 层完成 → 更新层级状态与质量
+ baton.layers[Lx].status = "completed"; // not_started | in_progress | completed
+ baton.layers[Lx].quality_score = avg(各批 quality_score);
 }
 ```
 
@@ -97,10 +97,10 @@ Skeleton-Agent 不负责回灌实现（避免越权），但必须**即时上报
 ```
 // L3 执行时，读路由发现 L1 没写该 PAGE
 发现缺失项 {
-  layer: "L1",
-  module: "MOD_001 客户管理",
-  page_id: "PAGE_005 客户导入",
-  found_from: "src/router/modules/customer.js line 42 import '/customer/import'"
+ layer: "L1",
+ module: "MOD_001 客户管理",
+ page_id: "PAGE_005 客户导入",
+ found_from: "src/router/modules/customer.js line 42 import '/customer/import'"
 }
 → 立即调用 Master.incremental_backfill_trigger(missing_scope) 让 Master 调度
 → Skeleton-Agent 当前批暂停（等 Master 补完 L1→L2 对应项后继续）

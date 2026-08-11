@@ -17,7 +17,7 @@
 | 4 | 状态为 X ∈ {L0..L5} → 从 baton.layers[Lx].current_batch + 1 续跑下一批 |
 | 5 | 每批完成 → 原子写 `_kb/Lx_*/xxx.json`（先 .tmp 再 rename）→ 更新 baton |
 | 6 | 状态推进 18 阶段：见下表 |
-| 7 | 循环推进，直到 DONE（达到合格 / 不合格加⚠️过） |
+| 7 | 循环推进，直到 DONE（达到合格 / 不合格加过） |
 
 ## 18 阶段简述（v6）
 
@@ -31,7 +31,7 @@
 | L4_OPERATION | 操作分批（**不读源码**，只看图谱节点）：FUNCTION→STEP→NEXT_STEP/分支 |
 | L5_DETAIL | 细节分批（局部精读读代码）：字段/角色×功能矩阵/ELEMENT/校验/异常 |
 | GRAPH_BUILD | 7 步图谱流水线：归一化→三元组→实体对齐→证据聚合→Snake→传播→质量落盘 |
-| GAP_ANALYSIS | 缺口分级（P0~P3）+ AI 自主判定：哪些回灌/哪些标⚠️ |
+| GAP_ANALYSIS | 缺口分级（P0~P3）+ AI 自主判定：哪些回灌/哪些标 |
 | AUTO_REVIEW | AI 自主裁决：低置信+Snake+权限+字段缺口处理，全部写 _auto_decisions.md |
 | RESOLVE | 冲突解决（6类高频冲突全自主规则，不询问用户） |
 | WRITE | Module-Writer 子 Agent 按模块隔离上下文写文档（6 件套齐全） |
@@ -39,14 +39,14 @@
 | REFERENCE_CHECK | 交叉引用+术语一致性+风格统一检查（用 Graph 反向查询） |
 | INTEGRATE | 整合为最终完整手册 + 4 大附录 B/C/D/E（权限矩阵/AI决策/Snake全景/证据索引） |
 | AUDIT | 10 维度自评（含新增2个图谱维度：交叉验证率+Snake覆盖率） |
-| TODO_RESOLVE | AI 逐条解决 TODO，P0 必须解决，无依据的加⚠️，不卡全局 |
+| TODO_RESOLVE | AI 逐条解决 TODO，P0 必须解决，无依据的加，不卡全局 |
 | JUDGE | 子 Agent 盲审按模块打分，不合格只打回单模块最多3次，其余模块不动 |
 
 ## 状态查询 & 用户主动打断
 
 在任意时刻，AI 会自动在回复开头输出：
 ```
-📘 当前状态：L3_FUNCTION（第4层），批次：[客户管理_客户列表搜索区, 客户管理_客户列表操作栏]，下一步：识别区域内的 ELEMENT 按钮 → methods 解析 → FUNCTION 节点沉淀
+ 当前状态：L3_FUNCTION（第4层），批次：[客户管理_客户列表搜索区, 客户管理_客户列表操作栏]，下一步：识别区域内的 ELEMENT 按钮 → methods 解析 → FUNCTION 节点沉淀
 ```
 
 用户主动说「进度」「暂停」「看一下」时：
