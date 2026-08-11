@@ -17,7 +17,7 @@ v6.2 根治了「执行 AI 默认核心优先 → 只做核心模块就交付浅
 - **闸门全面收紧**：G1~G5 从"核心模块/页面/区域/功能"改为"全部"，不满足即回补对应批次
 - **AUDIT 新增 ⑪ 覆盖完整性**（硬性 PASS/FAIL）：全量模式任何模块缺失、或核心优先模式缺附录 F → 阻断回 GAP_ANALYSIS
 - **baton schema 强化**：新增 `meta.work_mode`、`batch.skipped_modules`；`*_batches_total` 进入各层时推导写死、只增不减
-- **界面净化**：全库移除 emoji 图标（⚠️⏳✅❌ 等），保留文本箭头与带圈序号；修复移除时误删的进度条块、权限矩阵单元格值与推断警告标注，确保模板与协议语义完整
+- **界面净化**：全库移除 emoji 图标（如 警告、计时、完成、失败 等彩色 emoji），保留文本箭头与带圈序号；修复移除时误删的进度条块、权限矩阵单元格值与推断警告标注，确保模板与协议语义完整
 
 ---
 
@@ -28,7 +28,7 @@ v6.1 在六层骨架生长 + 知识图谱编织基础上完成**全流程自主�
 - **CONFIRM 阶段废除**：改为 AUTO_REVIEW 全自主 AI 裁决（低置信节点三选一：补证据/推断/附录C待复核），用户零介入；决策全量写入 `_auto_decisions.md` 可审计
 - **JUDGE 模块级打回**：盲审从"综合分/全量重写"改为"每模块独立 100 分、70 合格、PASS_rate≥70% 放行、只打回单模块 ≤3 次"
 - **AUDIT 扩展为 10 维度**：新增 ⑨图谱交叉验证率、⑩Snake完整性与覆盖率（各 10%，合计 20%），阈值统一 ≥60/100
-- **产物体系统一**：六层产物 → `_kb/Lx_*/*.json`；图谱 6 个 JSON（含 `_quality.json`）；WRITE 交付 → `output_user_manual/_modules/*.md`；附录 B~E 独立模板
+- **产物体系统一**：六层产物 → `_kb/Lx_*/*.json`；图谱 6 个 JSON（含 `_quality.json`）；WRITE 交付 → `output_user_manual/_modules/*.md`；附录 B~F 独立模板（F=未覆盖清单）
 - **增量回灌熔断统一**：同 LAYER+MODULE 回灌 ≥3 次熔断；JUDGE 打回模块重试 ≥3 次降级交付
 - **知识图谱补全**：graph 落盘补齐 `_quality.json`，供 AUDIT §⑨⑩ 与 GAP 查询
 - **Agent 补齐**：新增 12-refiner-agent（盲检）、14-judge-agent（盲审）；03-resolver 旧版改名为 v2-legacy，主流程用 enhanced 版
@@ -60,7 +60,7 @@ v6.1 在六层骨架生长 + 知识图谱编织基础上完成**全流程自主�
 | `agents/00-master-controller.md` | 18 阶段编排 + 批调度 + 回灌熔断 |
 | `agents/03-resolver-agent-enhanced.md` | 6 类冲突全自主规则 |
 | `agents/04-module-writer-agent.md` | graph 查询写模块 6 件套 |
-| `agents/05-integrator-agent.md` | 4 附录 B/C/D/E 整合 |
+| `agents/05-integrator-agent.md` | 5 附录 B/C/D/E/F 整合 |
 | `agents/07-gap-analyst-agent.md` | 输入改为 graph 查询；缺口分级 P0~P3 |
 | `agents/08-skeleton-agent.md` | L0-L5 六层批处理引擎 |
 | `agents/10-graph-builder-agent.md` | 7 步流水线输出 6 个 JSON |
@@ -70,7 +70,7 @@ v6.1 在六层骨架生长 + 知识图谱编织基础上完成**全流程自主�
 
 ## 修复
 
-- 附录 B~E 独立模板缺失（原为承诺未产出）→ 已补齐
+- 附录 B~F 独立模板缺失（原为承诺未产出）→ 已补齐
 - 01-scout/02-analyst → 01-extractor/02-analyzer 命名不一致 → 已统一
 - Refiner/Judge Agent 文件缺失 → 已补齐
 - Chunk05 §TODO 缺失 → 已补

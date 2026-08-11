@@ -36,8 +36,19 @@
 
 ## 模块级盲审流程（v6 重点：不合格只打回单模块·最多 3 次）
 
+### Step 0：覆盖核对（防"模块缺失静默通过"·v6.2 新增）
+
+> Master 只传入 **L1_index 模块数 + 模块名清单**（不传源码/图谱技术细节，保持盲审隔离）。
+
+```
+1. 数最终 MD 的「第 N 章 模块名」章节数
+2. 章节数 < L1_index 模块数 → 直接打回 WRITE（附缺失模块清单），不进 Step 1
+   （core_priority 模式：章节数 ≥ 核心模块数，且附录 F 未覆盖清单与 skipped_modules 一致，否则打回）
+3. 通过覆盖核对 → 进入 Step 1
+```
+
 ### Step 1：拆分模块
-> 从最终 MD 按「第 N 章 模块名」标题拆分成 N 个独立评审单元。附录 B/C/D/E 按「全局维度」单独评分（不计入 per_module_scores 单模块平均，但计入附录质量分影响综合分）。
+> 从最终 MD 按「第 N 章 模块名」标题拆分成 N 个独立评审单元。附录 B/C/D/E/F 按「全局维度」单独评分（不计入 per_module_scores 单模块平均，但计入附录质量分影响综合分）。
 
 ### Step 2：对每个模块独立打分（每模块互不看）
 
@@ -60,7 +71,7 @@ else:
  baton.meta.state = WRITE & baton.meta.sub_state="RERUN_MODULES"
  → 不合格模块且 retry_count[module] ≥ 3:
  不再重写
- 最终文档该模块末尾加 ：「该模块盲审第 3 次仍不合格，质量参考评分 X/100，请用户人工复核」
+ 最终文档该模块末尾加 **警告标注** ：「该模块盲审第 3 次仍不合格，质量参考评分 X/100，请用户人工复核」
  附录 C Top 清单新增该模块整体条目
 ```
 
@@ -68,7 +79,7 @@ else:
 
 ```
 综合分 = per_module_scores 平均分 × 0.7
- + 附录B/C/D/E 质量分（按 B 矩阵完整性/C 决策说明/D Snake全景/E 证据覆盖率·各 25 分）× 0.2
+ + 附录B/C/D/E/F 质量分（按 B 矩阵完整性/C 决策说明/D Snake全景/E 证据覆盖率/F 未覆盖清单与模块数一致性·各 20 分）× 0.2
  + 概述章·通用章·快速参考章质量分 × 0.1
 ```
 
@@ -79,7 +90,7 @@ else:
 ```json
 {
  "agent": "Judge-Agent",
- "version": "v6.1",
+ "version": "v6.2",
  "project": "xxx",
  "manual_file": "xxx/xxx 用户操作手册.md",
  "read_mode": "FINAL / INTEGRATION_FALLBACK",

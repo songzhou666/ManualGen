@@ -6,14 +6,14 @@
 
 ## Q1：接力棒损坏或缺失如何恢复？
 
-接力棒（`_baton.md`）是 ManualGen 状态机的唯一真相来源。如果接力棒损坏、内容异常或完全缺失，按以下步骤恢复：
+接力棒（`_baton.json`）是 ManualGen 状态机的唯一真相来源。如果接力棒损坏、内容异常或完全缺失，按以下步骤恢复：
 
 ### 步骤 1：识别损坏类型
 
 | 损坏类型 | 表现 | 恢复策略 |
 |---------|------|---------|
-| 文件不存在 | 读取 `_baton.md` 返回"文件不存在" | 创建新接力棒，从 START 重新执行 |
-| 状态字段异常 | 状态值不为 EXPLORE/EXTRACT/ANALYZE 等合法值 | 手动修正状态值 |
+| 文件不存在 | 读取 `_baton.json` 返回"文件不存在" | 创建新接力棒，从 START 重新执行 |
+| 状态字段异常 | 状态值不为 18 阶段合法值（START/L0_SKELETON/L1_MODULE/L2_REGION/L3_FUNCTION/L4_OPERATION/L5_DETAIL/GRAPH_BUILD/GAP_ANALYSIS/AUTO_REVIEW/RESOLVE/WRITE/REFINE/REFERENCE_CHECK/INTEGRATE/AUDIT/TODO_RESOLVE/JUDGE/DONE） | 手动修正状态值 |
 | 产物清单与实际不符 | 标记完成的产物实际不存在 | 重新生成缺失产物或修正标记 |
 | 完全空白 | 文件存在但内容为空 | 按模板重新写入 |
 
@@ -44,40 +44,40 @@ AI：接力棒当前状态异常。是否重置为最近可确认的阶段？
 
 ManualGen 内置分批分析机制。当项目文件数超过阈值时，AI 自动启用分批模式。
 
-### 分批机制说明
+### 分批机制说明（v6 铁律：批次数推导即写死）
 
 ```
-总模块数: 15 个
-分批策略: 每批 3-5 个模块
-批次管理: _analysis_batch_index.md
+总模块数: 15 个（L1 层 L1_total = 15）
+分批策略: L1 每批 3-5 个模块 → L1_total = ceil(15/4) = 4 批（进入 L1 时由 L0 节点数推导并写死进 baton，全程只增不减）
+批次管理: baton.layers[Lx].*_batches_total / batches_done（JSON 计数，非 _analysis_batch_index.md）
 ```
 
 ### 各阶段的分批处理
 
 | 阶段 | 分批方式 | 注意事项 |
 |------|---------|---------|
-| EXPLORE | 不批（一次性扫描全貌） | EXPLORE 必须完整，才能正确识别模块边界 |
-| EXTRACT | 按模块分批提取 | 每批提取 3-5 个模块的 API/实体/规则 |
-| ANALYZE | 按模块分批分析 | 每批 3-5 个模块，批次间传递上下文 |
+| L0_SKELETON | 不批（一次性扫描全貌） | L0 必须完整，才能正确识别模块边界并推导各层批次数 |
+| L1_MODULE | 按模块分批（`batches_done==batches_total` 才推进） | 批次数由 L0 模块数推导写死，AI 不得自行增删 |
+| L2_REGION | 按页面分批 | L2_total = ceil(页面总数/每批3页)，写死 |
+| L3_FUNCTION | 按区域分批 | L3_total 由 L2 区域数推导写死 |
+| L4_OPERATION | 按功能分批 | L4_total 由 L3 功能数推导写死 |
+| L5_DETAIL | 按实体/权限分批 | L5_total 由 L4 实体数推导写死 |
 | GAP | 不批（评估整体完整性） | GAP 需要全局视角，一次性完成 |
 | WRITE | 按模块分批编写 | 无依赖模块可并行（最多 3 个并发） |
 
-### 批次索引文件
+> **关键**：v6 不存在"每批 3-5 个模块自行决定做几批"的自由裁量。`batches_total` 进入该层时即写死，`batches_done < batches_total` 禁止推进下一层（见 SKILL.md 铁律 2）。
 
-`_analysis_batch_index.md` 管理所有批次的元信息：
+### 批次进度记录（baton JSON 计数）
 
-```markdown
-| 批次 | 模块 | 状态 | 产物文件 |
-|------|------|------|----------|
-| 1/3 | 客户管理, 订单管理, 商品管理 | 完成 | _analysis_batch_001.md |
-| 2/3 | 库存管理, 供应商管理, 采购管理 | 完成 | _analysis_batch_002.md |
-| 3/3 | 财务管理, 报表中心, 系统配置 | 进行中 | _analysis_batch_003.md |
+```json
+{ "layer": "L1_MODULE", "batches_total": 4, "batches_done": 2, "current_batch": 2, "status": "in_progress" }
 ```
+每批完成：`batches_done += 1`；未过质量门的批记入 `incomplete_batches`（不累加完成计数），GAP 阶段必须回灌。
 
 ### 相关
-- 相关阶段：ANALYZE
-- 相关文档：`artifacts/template-artifacts.md`（_analysis_batch_index.md 模板）
-- 分批规则：每批不超过 5 个模块，保证分析深度
+- 相关阶段：L0_SKELETON（推导写死）→ L1~L5（按批执行）
+- 相关文档：`protocols/baton-protocol.md`、SKILL.md 铁律 2「批次数推导即写死」
+- 分批规则：批次数由父层节点数推导写死，`batches_done < batches_total` 禁止推进下层
 
 ---
 
@@ -186,7 +186,7 @@ AI 执行入口清单：
 ### 常见问题
 
 **Q：续跑时发现前置产物不完整怎么办？**
-A：AI 会列出缺失的产物文件。如果缺失的产物不影响当前阶段（如之前的探索报告被清理），AI 可以跳过检查继续执行。如果关键产物缺失（如缺少分析报告但当前在 WRITE 阶段），AI 会返回前一阶段重新生成。
+A：AI 会列出缺失的产物文件。**v6 严格模式：不允许"跳过检查继续执行"**——若当前层标记 completed 但 `batches_done != batches_total`，或某批产物缺失/未过质量门（incomplete_batches 非空），必须回退该层重做（不信任旧标记，见 baton-protocol 断点恢复节）。若当前阶段的关键前置产物缺失，AI 返回前一阶段重新生成。
 
 **Q：续跑时接力棒状态与产物不一致怎么办？**
 A：以实际产物为准。如果接力棒标了"WRITE 完成"但 _modules/ 目录为空，AI 会重置状态为 WRITE 重新执行。
@@ -295,11 +295,12 @@ AI 会把用户给出的偏好写入 baton.custom_preferences 对象，在 WRITE
 
 {项目路径}/output_user_manual/ # ===== 最终交付目录 =====
 ├── _modules/*.md # WRITE 阶段模块文档
-└── _appendix/ # INTEGRATE 阶段附录
+└── _appendix/ # INTEGRATE 阶段附录（5 大附录 B~F，缺一阻断）
  ├── appendix-B-permission-matrix.md
  ├── appendix-C-AI-auto-decisions.md
  ├── appendix-D-snake-flows.md
- └── appendix-E-evidence-index.md
+ ├── appendix-E-evidence-index.md
+ └── appendix-F-uncalled-modules.md # F=未覆盖模块/功能清单（core_priority 必须产出；full 模式无未覆盖也要注明）
 ```
 
 **最终交付物**（`{项目名} 用户操作手册.md`）输出到**项目根目录**，不在 `.agent/harness/` 下。
@@ -318,7 +319,7 @@ AI 会把用户给出的偏好写入 baton.custom_preferences 对象，在 WRITE
 
 | 运行次数 | 行为 | 产物变化 |
 |---------|------|---------|
-| 第 1 次 | 完整流程（EXPLORE 到 JUDGE） | 所有产物从零创建 |
+| 第 1 次 | 完整流程（L0_SKELETON 到 JUDGE） | 所有产物从零创建 |
 | 第 2 次（代码未变） | 重新生成（覆盖产物） | 所有产物重新生成 |
 | 第 2 次（代码有小变更） | 增量更新 | 仅变更模块重新分析 |
 | 第 2 次（项目路径不同） | 独立项目 | 完全独立，互不影响 |
@@ -348,9 +349,9 @@ AI 会把用户给出的偏好写入 baton.custom_preferences 对象，在 WRITE
 
 ## Q10：如何验证 ManualGen 输出的质量？
 
-ManualGen 通过 10 维度审核体系（AUDIT）+ JUDGE 模块级盲审两层机制保障输出质量。
+ManualGen 通过 **10 维评分 + 第⑪维覆盖完整性硬门**（AUDIT）+ JUDGE 模块级盲审两层机制保障输出质量。
 
-### 第一层：10 维度自评（AUDIT 阶段）
+### 第一层：AUDIT 阶段（10 维自评 ≥60 + 第⑪硬门）
 
 原 6 维（权重合计 80%）：
 
@@ -369,6 +370,12 @@ ManualGen 通过 10 维度审核体系（AUDIT）+ JUDGE 模块级盲审两层�
 |:-:|:-----|:---:|:---------|
 | ⑨ | 图谱交叉验证率 | 10% | cross_verified_nodes_pct×10（节点双源验证比例） |
 | ⑩ | Snake 完整性 & 覆盖率 | 10% | min(snakes_discovered/目标数,1)×10 − incomplete×0.5 |
+
+**第 ⑪ 维（硬性 PASS/FAIL，不计权重分）**：
+
+| # | 维度 | 判定 | 检查内容 |
+|:-:|:-----|:---:|:---------|
+| ⑪ | 覆盖完整性（硬门） | PASS/FAIL | L1_index 全部模块 vs 手册章节逐一比对；未覆盖模块必须溯源到附录 F；core_priority 模式附录 F 与 `baton.batch.skipped_modules` 一致；**不 PASS → AUDIT 不得通过，回退 GAP_ANALYSIS 补齐** |
 
 ### 第二层：JUDGE 盲审
 

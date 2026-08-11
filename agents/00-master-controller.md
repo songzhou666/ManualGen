@@ -25,10 +25,14 @@ Step 0: 入口清单
 ### 0.2 用户中途激活（baton 存在且非 DONE / FAILED）
 ```
 a. 直接读 baton 恢复到 meta.state
-b. 若 meta.state ∈ L0~L5 → 从 baton.layers[Lx].current_batch + 1 继续跑
+b. 若 meta.state ∈ L0~L5：
+   b1. 先校验已完成层：逐个验证 baton.layers[Lx].status 为 "completed" 或 "completed_with_pending"
+   b2. 每层必须满足 batches_done == batches_total（计数或字段均可）；不满足或 status 非法 → 回退该层重做（记入 rework.history）
+   b3. 从 baton.layers[Lx].current_batch + 1 继续跑
 c. 若 baton.meta.sub_state=="BACKFILLING" → 从回灌断点继续
 d. 若 meta.state=AUTO_REVIEW 但 _auto_review_complete 标记存在 → 直接推进下一阶段（避免重复审）
-e. 输出一行：「ManualGen v6.2 已从断点恢复 | 阶段: <meta.state> | 进度: <简要百分比>」
+e. 若存在 baton.layers[Lx].status == "completed_with_pending" → 先走 GAP 强制回灌清单，不得直接 INTEGRATE
+f. 输出一行：「ManualGen v6.2 已从断点恢复 | 阶段: <meta.state> | 进度: <简要百分比>」
 ```
 
 ---
@@ -52,7 +56,7 @@ e. 输出一行：「ManualGen v6.2 已从断点恢复 | 阶段: <meta.state> | 
 | 12 | REFINE | REFERENCE_CHECK | 主控（调度 Refiner 子Agent按模块盲检） | chunk04§REFINE |
 | 13 | REFERENCE_CHECK | INTEGRATE | 主控（Graph 反向查询自检引用） | chunk04§REFERENCE_CHECK |
 | 14 | INTEGRATE | AUDIT | Integrator-Agent v6 | chunk04§INTEGRATE + flowchart-spec |
-| 15 | AUDIT | TODO_RESOLVE | 主控（新增2个图谱维度·10维） | chunk05§AUDIT(10维) |
+| 15 | AUDIT | TODO_RESOLVE | 主控（10维 + 第⑪覆盖完整性硬门） | chunk05§AUDIT(10维+⑪) |
 | 16 | TODO_RESOLVE | JUDGE | 主控 AI 自主逐条解决 | chunk05§TODO |
 | 17 | JUDGE | {合格→DONE / 不合格→模块级重写WRITE} | Judge-Agent v6（盲审·按模块打回） | chunk05§JUDGE + chunk09 |
 | 18 | DONE | — | 主控 | 最终交付报告 |
@@ -89,7 +93,10 @@ GAP_ANALYSIS 后：
  2.4 若 Skeleton 上报 missing_upstream →
  → 主控立即调 incremental_backfill(missing_scope: Chunk-09 §二)
  → 等回灌完成 → 恢复 Skeleton 当前批
- 2.5 当前层完成 → 更新 baton.meta.state = 下一层
+ 2.5 当前层完成判定（缺一不得推进）→ 更新 baton.meta.state = 下一层：
+   - 该层 batches_done == batches_total（计数或字段均可，只增不减）
+   - 该层 quality_score ≥ 层阈值（L0≥80, L1≥75, L2≥70, L3≥65, L4≥65, L5≥60）
+   - 无异常批残留（如存在 incomplete_batches → status="completed_with_pending"，仍需在 GAP 阶段回灌后才可 INTEGRATE）
  2.6 卸载 chunk07 过期节（如已跑 L2，卸载 §L0 §L1）+ 触发全局 save_baton
 ```
 
@@ -182,7 +189,7 @@ meta.state = WRITE:
  3. 页面操作指南（PAGE 按 REGION 拆写 + ELEMENT 按钮表）
  4. 流程图（页面流程 + Snake 片段跨模块流程）
  引用来源：每段内容在文末写「信息依据」（evidence IDs，不再显示代码片段，但可反向追溯）
- 置信度标注：confidence < 0.7 的段落加 警告 前缀说明
+ 置信度标注：confidence < 0.7 的段落加 **警告** 前缀说明
 ```
 
 ---
@@ -208,7 +215,8 @@ JUDGE 盲审返回 per_module_scores 后：
 
 | 异常 | 处理 |
 |------|------|
-| 某层某批连续 3 次质量门不通过 | 写 warning → 后续 GAP / AUTO_REVIEW / TODO 阶段去修，不阻塞推进 |
+| 某层某批连续 3 次质量门不通过 | 写 warning + 记入 `baton.layers[Lx].incomplete_batches` → 后续 GAP 阶段**必须**回灌补全，不静默推进；回灌后仍不合格 → 该模块最终加警告标注 + 附录 C Top 清单 |
+| 层状态为 `completed_with_pending` | 该层存在未过质量门的批 → GAP 阶段强制回灌，回灌完成前禁止 INTEGRATE |
 | 同一 LAYER+MODULE 回灌 ≥3 次 | 判定"确实缺实现或读不到" → 模块最终加 → 不继续尝试 |
 | GRAPH Step7 落盘失败（磁盘满等） | 重试 2 次；仍失败 → 立即输出状态+错误+baton 路径 → FAILED 等用户处理 |
 | 激活时 baton.meta.state == FAILED | 读 last_blocker → 从阻断阶段前开始（不从头来） |

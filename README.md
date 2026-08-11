@@ -94,7 +94,7 @@ E:\my-erp 我新增了「智能建议 suggestions 模块」，帮我把这部分
 │ ├── chunk-02-explore-extract.md # S1小项目捷径：探索/抽取（v5兼容）
 │ ├── chunk-03-analyze-gap.md # 缺口分级 P0~P3（从图谱查）
 │ ├── chunk-04-resolve-write.md # 6冲突解决 + WRITE 6件套
-│ ├── chunk-05-audit-judge.md # 10维度自评 + TODO + JUDGE 盲审
+│ ├── chunk-05-audit-judge.md # 10维+⑪硬门自评 + TODO + JUDGE 盲审
 │ ├── chunk-06-privacy-security.md # 隐私与安全约束
 │ ├── chunk-07-skeleton-growth.md # v6核心：L0-L5 六层批处理规则
 │ ├── chunk-08-knowledge-graph.md # v6核心：7步图谱 + Snake
@@ -107,7 +107,7 @@ E:\my-erp 我新增了「智能建议 suggestions 模块」，帮我把这部分
 │ ├── 03-resolver-agent-enhanced.md # 6类冲突全自主规则（v6主用）
 │ ├── 03-resolver-agent-v2-legacy.md # 旧版Resolver（v5保留，不参与v6流程）
 │ ├── 04-module-writer-agent.md # 按模块隔离上下文写 6 件套
-│ ├── 05-integrator-agent.md # 4附录B/C/D/E 整合
+│ ├── 05-integrator-agent.md # 5附录B/C/D/E/F 整合
 │ ├── 06-file-writer-agent.md # 文件落盘控制（v5 legacy）
 │ ├── 07-gap-analyst-agent.md # 缺口分级 P0~P3（v6从图谱查）
 │ ├── 08-skeleton-agent.md # L0-L5 六层批处理引擎
@@ -159,7 +159,7 @@ E:\my-erp 我新增了「智能建议 suggestions 模块」，帮我把这部分
 
 | 版本 | 日期 | 核心变化 |
 |------|------|---------|
-| v6.2.0 | 2026-08-11 | 全流程自主托管：AUTO_REVIEW 取代 CONFIRM、JUDGE 模块级打回、AUDIT 10 维度、产物路径统一、附录 B~E 模板、Refiner/Judge Agent 补齐 |
+| v6.2.0 | 2026-08-11 | 全流程自主托管：AUTO_REVIEW 取代 CONFIRM、JUDGE 模块级打回、AUDIT 10维 + ⑪覆盖完整性硬门、产物路径统一、附录 B~F 模板（F=未覆盖清单）、Refiner/Judge Agent 补齐 |
 | v6.0.0 | 2026-08-10 | 六层增量 + 知识图谱 + Snake + 增量回灌，13→18 阶段 |
 
 ---

@@ -550,7 +550,7 @@ core_module_ids 只用于决定批次先后顺序（先处理核心），**不�
 |------|------|-------------|
 | 低置信 FUNCTION/STEP（0.5≤c<0.7） | 先看置信传播：同区域 2+ 邻居节点均 ≥0.85 且有公共边 → 传播提升 c=0.76 | ACCEPTED_BY_PROPAGATION |
 | 低置信 ELEMENT/ROLE（c<0.5） | 回 L3/L5 层只读对应组件源码 1 个文件（不重跑全批）→ 找到 handler 证据 → c 提升到 ≥0.75 | EVIDENCE_SUPPLEMENTED |
-| 仍 <0.7 且 AI 判定"操作可推断" | WRITE 阶段对应位置加 警告 提示语（不写虚假按钮/明确操作语句） | INFERRED_WITH_WARNING |
+| 仍 <0.7 且 AI 判定"操作可推断" | WRITE 阶段对应位置加 **警告** 提示语（不写虚假按钮/明确操作语句） | INFERRED_WITH_WARNING |
 | 仍 <0.7 且 AI 也无法判定 | WRITE 阶段不引用；附录 C "仍需人工复核清单" 列示 | HUMAN_REVIEW_REQUIRED |
 
 | 类别 | Snake / incomplete 专项规则 |

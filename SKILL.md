@@ -162,7 +162,7 @@ L0 骨架层 (Skeleton) 项目形状：模块数+依赖图+角色矩阵+数据�
 | **REFINE** | 12 | 回扫：子Agent盲检每模块质量（不合格自主修复） | `_refine_log.md` | | 逐模块 |
 | **REFERENCE_CHECK** | 13 | 一致性：交叉引用+术语统一+权限矩阵连贯 | `_reference_check.md` | | — |
 | **INTEGRATE** | 14 | 合并：模块→整手册，含跨模块Snake+权限矩阵+AI决策附录 | `_integration.md` + 根目录最终md | | 按域分批 |
-| **AUDIT** | 15 | 自评：10维度预审（6原维 + 图谱交叉验证率⑨ + Snake完整性⑩ 2个新维度） | `_audit.md` | | — |
+| **AUDIT** | 15 | 自评：10维评分（6原维 + 图谱交叉验证率⑨ + Snake完整性⑩）+ **第⑪维覆盖完整性硬门**（L1_index 全模块 vs 手册章节比对） | `_audit.md` | | — |
 | **TODO_RESOLVE** | 16 | 待办：统一解决审核中标记的TODO（AI自主解决） | `_todo_resolution.md` | | — |
 | **JUDGE** | 17 | 盲审：子Agent盲审真正质量门（不合格打回模块级重做） | `_judgment.md` | → DONE | — |
 | DONE | 18 | 完成：收口交付，输出成品+质量报告+决策附录链接 | 最终交付物路径 | 结束 | — |
@@ -189,7 +189,7 @@ START
 | L0_SKELETON | L1_MODULE | L0_skeleton_report.md 已生成、模块非空、依赖图已画、G0通过 | L2以上 |
 | L1_MODULE | L2_REGION | **全部模块**L1完成（批循环覆盖100%）、G1通过 | L3以上 |
 | L2_REGION | L3_FUNCTION | **全部页面**L2完成（批循环覆盖100%）、G2通过 | L4以上 |
-| L3_FUNCTION | L4_OPERATION | **全部区域**功能识别率≥90%、G3通过 | L5以上 |
+| L3_FUNCTION | L4_OPERATION | **全部区域 100% 覆盖**（批循环，`batches_done==batches_total`，已识别 FUNCTION ≥90% 带 trigger_element+OPERATES_ON 证据）、G3通过 | L5以上 |
 | L4_OPERATION | L5_DETAIL | **全部功能**每功能≥5步+流程图、G4通过 | GRAPH以上 |
 | L5_DETAIL | GRAPH_BUILD | 字段覆盖≥80%、权限矩阵≥70%、G5通过 | GAP以上 |
 | GRAPH_BUILD | GAP_ANALYSIS | graph 6文件落盘（_nodes/_triples/_evidence/_snakes/_layer_index/_quality）、entity_alignment_pending ≤ 0 | AUTO_REVIEW以上 |
@@ -200,7 +200,7 @@ START
 | REFINE | REFERENCE_CHECK | 全部模块PASS≥8/10（不合格自主修复后达标） | INTEGRATE以上 |
 | REFERENCE_CHECK | INTEGRATE | 术语一致≥95%、交叉引用全有效 | AUDIT以上 |
 | INTEGRATE | AUDIT | 含Snake跨模块章节+权限矩阵附录+AI决策附录 | TODO_RESOLVE以上 |
-| AUDIT | TODO_RESOLVE | 10维度打分完毕、每维度有依据 | JUDGE以上 |
+| AUDIT | TODO_RESOLVE | 10维打分 ≥60 **+ 第⑪维覆盖完整性硬性 PASS**（L1_index 全模块 vs 手册章节逐一比对，未覆盖模块必须溯源到附录 F），每维有依据 | JUDGE以上 |
 | TODO_RESOLVE | JUDGE | TODO解决率≥90%、剩余P0有说明 | DONE以上 |
 | JUDGE | DONE | 模块级盲审 PASS_rate≥0.70（≥70分的模块占比≥70%）、每模块≥70分 | 继续执行 |
 | JUDGE(打回某模块) | WRITE（只重做打回模块） | 打回理由记入rework.history（其余模块不动） | 跳过WRITE |
@@ -209,7 +209,7 @@ START
 ### AI自主裁决规则（AUTO_REVIEW 阶段·不打断用户）
 | 待决策项 | 规则（AI直接判·不询问） | 写入文档时的标记 |
 |---------|----------------------|----------------|
-| 低置信 FUNCTION (0.5~0.7) + 有≥1条单源证据 | 保留为「推断功能」，步骤描述从肯定改为条件语气 | 操作说明前加 小注：「此功能根据菜单/路由推断，未找到明确按钮handler，请按实际界面确认」 |
+| 低置信 FUNCTION (0.5~0.7) + 有≥1条单源证据 | 保留为「推断功能」，步骤描述从肯定改为条件语气 | 操作说明前加 **警告** 小注：「此功能根据菜单/路由推断，未找到明确按钮handler，请按实际界面确认」 |
 | 低置信 FUNCTION (<0.5) + 无证据 | 丢弃，不写入文档（记 `_auto_decisions.md` 备查） | — |
 | Snake节点顺序疑义 | AI按L0数据创建链 + GRAPH的OPERATES_ON传播自动重排，写入snake.meta.auto_reordered=true | Snake流程图底部加灰色小字：「流程顺序由AI推断，实际操作以界面为准」 |
 | 权限矩阵疑义 (缺10%~30%) | AI从ROLE继承关系 + 模块依赖关系传播补齐，标记propagated | 附录权限矩阵灰色标注为「AI推断权限」 |
@@ -279,11 +279,12 @@ START
 ├── _modules/ # WRITE阶段模块文档（子Agent写）
 │ ├── 01_客户管理.md
 │ └── ...
-└── _appendix/ # INTEGRATE阶段附录（B~E模板生成）
+└── _appendix/ # INTEGRATE阶段附录（B~F模板生成，F=未覆盖清单）
  ├── appendix-B-permission-matrix.md
  ├── appendix-C-AI-auto-decisions.md
  ├── appendix-D-snake-flows.md
- └── appendix-E-evidence-index.md
+ ├── appendix-E-evidence-index.md
+ └── appendix-F-uncalled-modules.md
 
 # 最终交付物
 {项目根目录}/{项目名称} 用户操作手册.md
@@ -306,7 +307,7 @@ START
 | G0 | L0→L1 | 模块数非空+依赖图非孤立+角色≥2+数据创建链≥3 | L0.quality≥80 | 补充探索，不能进L1 |
 | G1 | L1→L2 | **全部模块**L1完成+每页都有入口+实体≥1 | L1.quality≥75 | 缺哪个模块补哪个，不重跑整层 |
 | G2 | L2→L3 | **全部页面**区域划分完整+≥1区域间触发关系 | L2.quality≥70 | 缺哪页补哪页 |
-| G3 | L3→L4 | **全部区域**功能识别率≥90%+每功能≥1入口元素 | L3.quality≥65 | 缺哪区域补哪区域 |
+| G3 | L3→L4 | **全部区域 100% 覆盖**（批循环，`batches_done==batches_total`）+ 已识别 FUNCTION ≥90% 带 trigger_element 入口 | L3.quality≥65 | 缺哪区域补哪区域 |
 | G4 | L4→L5 | **全部功能**每功能≥5步+≥1分支流程图 | L4.quality≥65 | 缺哪功能补哪功能 |
 | G5 | L5→GRAPH | 字段覆盖率≥80%+权限矩阵≥70%+错误消息≥50条 | L5.quality≥60 | 缺哪些字段补哪些字段 |
 | GW | WRITE→REFINE | 子Agent写出的模块文件不出现API端点/数据库名等技术泄露 | 每模块REFINE清单≥8/10 | 不合格模块立即重写（不影响其他已合格模块） |
@@ -342,7 +343,7 @@ START
 
 > **背景**：v6.1 曾默认"核心优先"，导致执行 AI 自行降级只做核心模块就交付，用户拿到浅层手册（如 10 模块项目只写了 6 页 → 手册仅 266 行）。v6.2 起强制以下规则：
 
-1. **默认全量**：除非用户消息中**显式点名模块范围**（如"只写客户管理模块"），否则 L0→L5 必须覆盖项目 100% 的模块/页面/区域/功能/字段。每个 L 层按批循环，直到 `batches_done == batches_total` 才允许进入下一层。
+1. **默认全量**：除非用户消息中**显式点名模块范围**（如"只写客户管理模块"），否则 L0→L5 必须覆盖项目 100% 的模块/页面/区域/功能；字段覆盖以 100% 为目标、≥80% 为推进闸门，权限矩阵以 100% 为目标、≥70% 为推进闸门（见下），**未覆盖部分必须显式披露**（附录 F 未覆盖清单或附录 C Top 未决项），禁止静默缺失。每个 L 层按批循环，直到 `batches_done == batches_total` 才允许进入下一层。
 2. **批次数推导即写死**：进入某 L 层时，先由父层节点数推导 `*_batches_total`（如 L2_total = ceil(页面总数/每批3页)）写入 baton，**全程只增不减**；`batches_done < batches_total` 时禁止推进到下一阶段。
 3. **禁止自行降级**：AI 不得因"上下文太长/项目太大/耗时预估"自行切换核心优先或提前收口。上下文紧张 → 用断点续跑/批次落盘解决，不得缩范围。
 4. **核心优先 = 显式 opt-in + 强制披露**：仅用户点名模块范围时启用；此时必须 (a) 在 baton 记 `work_mode="core_priority"` + `skipped_modules=[...]`；(b) 其余模块仍全量扫到 L2 作背景；(c) INTEGRATE 强制生成**附录 F：未覆盖模块/功能清单**；(d) 手册首页注明"本手册仅覆盖 X 模块，未覆盖 Y、Z"。
@@ -439,8 +440,8 @@ v5是每个阶段完成才更新接力棒；v6改为：
 | WRITE | 04 §WRITE（v6升级版：从图谱查，不读源码不读_extraction） | Module-Writer子Agent×N（隔离上下文） | 查询graph：按模块查 MODULE→PAGE→REGION→FUNCTION→STEP+流程图+ROLE权限+Snake关联 | `output_user_manual/_modules/*.md` |
 | REFINE | 04 §REFINE | Refiner子Agent×N（盲检） | 每个`output_user_manual/_modules/*.md`独立检查 | `_refine_log.md` + 修复后重写模块 |
 | REFERENCE_CHECK | 04 §REFERENCE_CHECK | 主控自检 | 全`output_user_manual/_modules/*.md` 交叉比对 | `_reference_check.md` |
-| INTEGRATE | 04 §INTEGRATE（+Snake附录） | Integrator-Agent | `output_user_manual/_modules/*.md` + `_snakes.json` + 权限矩阵.json | `_integration.md` + `output_user_manual/_appendix/B~E.md` + 项目根目录最终md |
-| AUDIT | 05（10维度） | 主控自评 + 子Agent盲审底稿 | _integration.md + _audit.md | `_audit.md` |
+| INTEGRATE | 04 §INTEGRATE（+Snake附录） | Integrator-Agent | `output_user_manual/_modules/*.md` + `_snakes.json` + 权限矩阵.json | `_integration.md` + `output_user_manual/_appendix/B~F.md`（F=未覆盖清单） + 项目根目录最终md |
+| AUDIT | 05（10维 + ⑪硬门） | 主控自评 + 子Agent盲审底稿 | _integration.md + _audit.md | `_audit.md` |
 | TODO_RESOLVE | 05 §TODO | 主控逐条解决 | _todo_list.md + 对应源码或图谱节点 | `_todo_resolution.md` |
 | JUDGE | 05 §JUDGE | Judge子Agent盲审 | _integration.md 全量（不给技术背景，只看文档质量） | `_judgment.md` |
 

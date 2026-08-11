@@ -8,7 +8,7 @@
 | 02 | chunk-02-explore-extract.md | ~4KB | 旧 EXPLORE+EXTRACT（v5兼容保留·小项目可直接走） | S1超小项目跳层时用 |
 | 03 | chunk-03-analyze-gap.md | ~4KB | 旧 ANALYZE + GAP（v5兼容· v6 GAP 只用其中缺口分级+评分规则） | S1小项目用，大项目仅GAP加载缺口部分 |
 | 04 | chunk-04-resolve-write.md | ~5KB | RESOLVE + WRITE/REFINE/INTEGRATE（v6升级版：从graph查询，不读_extraction） | 进入 RESOLVE / WRITE 时 |
-| 05 | chunk-05-audit-judge.md | ~4KB | AUDIT（10维度，含图谱2个新维度） + §TODO + JUDGE（盲审） | 进入 AUDIT 时 |
+| 05 | chunk-05-audit-judge.md | ~4KB | AUDIT（10维 + 第⑪覆盖完整性硬门） + §TODO + JUDGE（盲审） | 进入 AUDIT 时 |
 | 06 | chunk-06-privacy-security.md | ~2KB | 隐私保护+安全脱敏+证据加密 | always（无条件） |
 | 07 | chunk-07-skeleton-growth.md | ~12KB | 六层骨架生长执行细则 §L0~§L5 + §自主裁决规则 | L0~L5每层进入时加载对应§节，§自主裁决在 AUTO_REVIEW 与用户主动追问进度时加载 |
 | 08 | chunk-08-knowledge-graph.md | ~8KB | GRAPH_BUILD 7步流水线 + Snake发现 + 增量构建规则 | 进入 GRAPH_BUILD 时全量加载 |
@@ -36,7 +36,7 @@
 | REFINE | 01, 06, 04§REFINE | 子Agent盲检 |
 | REFERENCE_CHECK | 01, 06, 04§REFERENCE_CHECK | 主控自检 |
 | INTEGRATE | 01, 06, 04§INTEGRATE, 10 | 含Snake附录+AI决策附录+权限矩阵 |
-| AUDIT | 01, 06, 05§AUDIT(10维度) | 主控自评（含图谱质量2个新维度） |
+| AUDIT | 01, 06, 05§AUDIT(10维+⑪硬门) | 主控自评（含图谱质量2个新维度 + 覆盖完整性⑪） |
 | TODO_RESOLVE | 01, 06, 05§TODO | AI自主逐条解决 |
 | JUDGE | 01, 06, 05§JUDGE | 子Agent盲审 · 不合格打回模块级 |
 | GAP 缺口严重 / JUDGE打回 | 追加 09 | 增量回灌 / 局部重做 |

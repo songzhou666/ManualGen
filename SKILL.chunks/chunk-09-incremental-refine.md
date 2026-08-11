@@ -136,11 +136,12 @@ GAP 报告出来后不直接进 AUTO_REVIEW，AI 先做一次回灌必要性判�
 | GAP 情况 | 阈值 | 决策 |
 |---------|------|------|
 | 模块 P0 功能缺失（应该有CRUD但缺U/D） | 模块 P0 ≥ 2个 | 触发「模块级回灌 L2→L3」对应模块（**全量模式所有模块一视同仁，不得因非核心而跳过**；core_priority 模式核心模块优先） |
+| 模块 P1 缺口（功能部分实现 / 区域识别不全 / 操作缺失） | 存在 `incomplete_batches` 或 P1 ≥ 3 个 | 触发「模块级回灌 L2→L4」对应模块；回灌后仍不合格 → 该模块最终加警告标注 + 附录 C Top 清单 |
 | 非核心模块 P0 较多 | 非核心 P0 ≥ 5 个 & 核心无P0 | 全量模式下必须回灌对应模块；仅 core_priority 模式（用户未点名该模块）才可标注「扩展功能」，且必须列入附录F未覆盖清单，禁止静默跳过 |
 | 权限矩阵完整度 < 50% | coverage_percent < 50 | 回灌 L5 权限矩阵.json，从 role_check 注解 + 路由 meta.roles 聚合扫一遍 |
 | Snake 数量 0 | snakes_discovered==0 | 回灌 GRAPH Step5 Snake 发现加强版（阈值0.65→0.55） |
 | 字段覆盖 < 50%（全部 ENTITY，默认全量） | documented/fields_total < 50 | 回灌 L5 对应ENTITY的字段详情 |
-| 以上都不严重 | completeness_score ≥ 70 | **不回灌**，直接推进 AUTO_REVIEW，置信度低的靠AI裁决，文档中加标注 |
+| 以上都不严重 | completeness_score ≥ 70 **且无 `incomplete_batches`** | **不回灌**，直接推进 AUTO_REVIEW；若存在 `incomplete_batches` 则必须回灌，不得直接推进 |
 
 ### 决策结果写入
 `_gap_analysis.md` 末尾追加：

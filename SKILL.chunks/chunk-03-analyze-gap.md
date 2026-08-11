@@ -1,7 +1,7 @@
 # S1 小项目捷径（ANALYZE + GAP）+ GAP_ANALYSIS 阶段详情（v6）
 
 > v6 定位：完整大项目走「L0~L5 六层 + 图谱」主线，本 chunk 只服务两类场景：
-> ① S1 小项目捷径（≤6 模块/单页应用）：保留 v5 的 EXPLORE/EXTRACT/ANALYZE 快速路径；
+> ① S1 小项目捷径（**口径与 phase-protocol §一 一致：MODULE < 3 且 PAGE < 10**）：保留 v5 的 EXPLORE/EXTRACT/ANALYZE 快速路径；**但必须同步产出 `_kb/L1_index.json`（模块清单），供 AUDIT ⑪ 覆盖完整性比对**；
 > ② GAP_ANALYSIS 阶段（阶段 8）：**从图谱查询缺口**（v6 替代 v5 的 _analysis/_function_survey 输入）。
 > 注意：v6 主线中 `_analysis.md`/`_function_survey.md` 不再产生，GAP 输入一律从 `_kb/graph/` 查。
 

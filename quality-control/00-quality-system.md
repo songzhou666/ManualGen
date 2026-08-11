@@ -2,7 +2,7 @@
 
 > **说明**：本文件汇总 v6 各阶段的 QA 要求。
 > - 六层闸门（G0~G5）：见 SKILL.md 七层闸门体系；
-> - AUDIT 阶段：10 维度自评（6 原维 80% + 图谱交叉验证率 10% + Snake 完整性 10%，7/8 号快速入门/术语统一为 0% 引用维度）；
+> - AUDIT 阶段：10 维自评（6 原维 80% + 图谱交叉验证率 10% + Snake 完整性 10%，7/8 号快速入门/术语统一为 0% 引用维度）**+ 第⑪维覆盖完整性硬性 PASS/FAIL**（L1_index 全模块 vs 手册章节比对）；
 > - JUDGE 阶段：模块级盲审 6 维度（25/20/15/15/15/10，每模块 100 分、70 合格，PASS_rate≥0.70）。
 > 详细审核标准见 `SKILL.chunks/chunk-05-audit-judge.md`
 
@@ -235,12 +235,12 @@ conflict_quality:
  p0_critical:
  handling: "auto_review_judge" # v6 全自主：AI 按证据链规则裁决（不询用户）
  requires: "证据链≥2条独立源"
- escalation: "附录 C Top 清单 + 对应模块加 警告 标注"
+ escalation: "附录 C Top 清单 + 对应模块加 **警告** 标注"
 
  p1_high:
  handling: "auto_with_evidence"
  requires: "置信度>0.8"
- fallback: "标记 警告 推断（记录到 _auto_decisions.md）"
+ fallback: "标记 **警告** 推断（记录到 _auto_decisions.md）"
 
  p2_medium:
  handling: "auto_merge"
@@ -281,7 +281,7 @@ conflict_detection:
 ## 最终审核质量控制（JUDGE 模块级盲审 6 维）
 
 > **注意**：本段 6 维（25/20/15/15/15/10）是 **JUDGE 模块级盲审**配置（见 agents/14-judge-agent.md）；
-> **AUDIT 阶段为 10 维**（6 原维各降至 20/16/12/12/12/8 + ⑨图谱交叉验证率 10% + ⑩Snake 完整性 10%），见 SKILL.chunks/chunk-05-audit-judge.md。
+> **AUDIT 阶段为 10 维 + 1 硬性项**（6 原维各降至 20/16/12/12/12/8 + ⑨图谱交叉验证率 10% + ⑩Snake 完整性 10% + ⑪ 覆盖完整性硬性 PASS/FAIL：L1_index 全模块 vs 手册章节比对，未覆盖必须溯源到附录 F；不 PASS → AUDIT 不过，回退 GAP_ANALYSIS），见 SKILL.chunks/chunk-05-audit-judge.md。
 
 ### 审核检查项
 

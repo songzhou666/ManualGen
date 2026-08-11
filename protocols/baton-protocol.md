@@ -282,10 +282,11 @@
 进入下一阶段/下一层前必须验证：
 ```
 验证顺序：
- 1. progress 中当前阶段是否为
+ 1. progress 中当前阶段是否为 "completed"
  2. 当前层 quality_score ≥ 最低阈值（L0≥80, L1≥75, L2≥70, L3≥65, L4≥65, L5≥60）
  3. 该层 artifacts 路径下文件非空（逐个打开验证，不看文件名看内容）
  4. graph 中该层节点的 evidence_cross_verified_rate ≥ 层阈值
+ 5. 全量覆盖校验：该层 `batches_done == batches_total`（缺一不推进）
 不通过 → 回退当前层重做，不推进到下一层
 ```
 
@@ -300,11 +301,12 @@
 会话中断后再次激活时：
 ```
 1. 读 _baton.json
-2. 找到 progress 中第一个非 非 的阶段
-3. 校验：progress 标记 但对应 artifacts 缺失 → 回退到该层重做，记入 rework.history
-4. 含闸门的阶段（GATE_*）：如果标记 → 强制重新跑闸门验证
-5. 对 L3/L4/L5：按 layers.Lx.current_batch 从该批次继续，不重跑已完成批次
-6. GRAPH_BUILD 续跑：只处理 dirty=true 的节点和新加入的节点，不重建全图
+2. 找到 progress 中第一个非 "completed" 的阶段（从该阶段开始续跑）
+3. 校验：progress 标记 "completed" 但对应 artifacts 缺失 → 回退到该层重做，记入 rework.history
+4. 已标记 "completed" 的层逐个验证 `batches_done == batches_total` 且 quality_score ≥ 层阈值；任一不满足 → 回退该层重做（不信任旧标记，防止断点恢复后带病推进）
+5. 含闸门的阶段（GATE_*）：如果标记 "completed" → 强制重新跑闸门验证
+6. 对 L3/L4/L5：按 layers.Lx.current_batch 从该批次继续，不重跑已完成批次
+7. GRAPH_BUILD 续跑：只处理 dirty=true 的节点和新加入的节点，不重建全图
 ```
 
 ### 5. 打回重做进度重置（AUTO_REVIEW / JUDGE / 用户主动指出问题 触发）
@@ -349,7 +351,7 @@ JUDGE 通过后：
 ```
 
 ### 进度 但产物缺失
-- 回退该阶段/该层到 （重做）
+- 回退该阶段/该层到 "pending" 状态（重做）
 - 记入 `rework.history`，记录是哪一层哪个产物丢了
 - **不影响其他层的已完成产物**
 

@@ -100,7 +100,7 @@ skill:
         - "_kb/graph/"            # 知识图谱（_nodes/_triples/_evidence/_snakes/_layer_index/_quality.json 共6个）
     delivery:
       root: "output_user_manual"
-      description: "最终交付目录（WRITE/INTEGRATE 阶段产物）：模块文档 + B~E 附录，最终合并进主手册"
+      description: "最终交付目录（WRITE/INTEGRATE 阶段产物）：模块文档 + B~F 附录（含未覆盖清单），最终合并进主手册"
       subdirs:
         - "_modules/"
         - "_appendix/"

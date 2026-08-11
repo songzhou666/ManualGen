@@ -50,15 +50,21 @@ async function run_layer(layer_def) {
  batch_results = await rerun_batch_with_hint(batch, gate.remedy_hint);
  atomic_write_override(...);
  } else {
- // 无法补救 → 标 incomplete 记录，继续下一批
- batch_results.notes.push("quality_gate_failed_but_continue");
- _auto_decisions.md 追加 "[BATCH_XX] ... 未过质量门：${gate.fail_reason}, 继续向下"
+ // 无法补救 → 记入 incomplete_batches（不得静默继续），该批不累加 completed 计数
+ baton.layers[Lx].incomplete_batches.push({ batch_id, reason: gate.fail_reason });
+ _auto_decisions.md 追加 "[BATCH_XX] ... 未过质量门：${gate.fail_reason}，记入待回灌清单"
  }
  }
  // 5. 更新进度
- baton.layers[Lx].current_batch = i + 1;
- // 完成计数按层取对应字段累加（L1: modules_completed / L2: regions_completed / L3: functions_completed / L4: operations_completed / L5: fields_documented 等）
- baton.layers[Lx].<completed字段> += batch_results.items_written;
+ // 未过质量门且无法补救的批（已记入 incomplete_batches）→ 不推进 current_batch、不累加 completed，
+ // 留待 GAP 回灌补全；只有通过的批才推进计数（与 L53 注释一致）
+ if (baton.layers[Lx].incomplete_batches.some(b => b.batch_id === batch.id)) {
+   // 本批保持 current_batch 不变、completed 不累加；quality_score 刷新为当前门分
+ } else {
+   baton.layers[Lx].current_batch = i + 1;
+   // 完成计数按层取对应字段累加（L1: modules_completed / L2: regions_completed / L3: functions_completed / L4: operations_completed / L5: fields_documented 等）
+   baton.layers[Lx].<completed字段> += batch_results.items_written;
+ }
  baton.layers[Lx].quality_score = gate.score; // 每批后刷新本层质量分
  save_baton(); // 每批落盘接力棒，防止崩溃丢失
  // 6. 上下文回收
@@ -67,6 +73,10 @@ async function run_layer(layer_def) {
  // 层完成 → 更新层级状态与质量
  baton.layers[Lx].status = "completed"; // not_started | in_progress | completed
  baton.layers[Lx].quality_score = avg(各批 quality_score);
+ // 层完成但存在未过质量门的批 → 状态置 "completed_with_pending"，GAP 阶段必须回灌
+ if (baton.layers[Lx].incomplete_batches.length > 0) {
+   baton.layers[Lx].status = "completed_with_pending";
+ }
 }
 ```
 
@@ -123,7 +133,9 @@ L5 跑完 & 质量门通过 → Master 自动进入 GRAPH_BUILD（调度 GraphBu
 如果其中某层某批连续3次重跑仍不合格：
 ```
 写 _auto_decisions.md 说明 + baton.layers[Lx].quality_score = 本次最高分（低于阈值没关系）
-→ 不阻塞推进 → 只在 GAP_ANALYSIS 阶段会识别到质量问题触发增量回灌
++ 记入 baton.layers[Lx].incomplete_batches（不得静默放行）
+→ 不阻塞推进 → 但该批已记入待回灌清单，GAP_ANALYSIS 阶段必须回灌补全；
+   回灌后仍不合格 → 最终文档该模块末尾加警告标注（对应附录 C Top 未决项）
 ```
 
 ---

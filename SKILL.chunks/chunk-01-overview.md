@@ -37,8 +37,8 @@
 | WRITE | Module-Writer 子 Agent 按模块隔离上下文写文档（6 件套齐全） |
 | REFINE | 独立子 Agent 盲检每个模块，失败项自动修复 |
 | REFERENCE_CHECK | 交叉引用+术语一致性+风格统一检查（用 Graph 反向查询） |
-| INTEGRATE | 整合为最终完整手册 + 4 大附录 B/C/D/E（权限矩阵/AI决策/Snake全景/证据索引） |
-| AUDIT | 10 维度自评（含新增2个图谱维度：交叉验证率+Snake覆盖率） |
+| INTEGRATE | 整合为最终完整手册 + 5 大附录 B/C/D/E/F（权限矩阵/AI决策/Snake全景/证据索引/未覆盖清单） |
+| AUDIT | 10 维自评 ≥60 + **第⑪维覆盖完整性硬性 PASS/FAIL**（L1_index 全模块 vs 手册章节比对） |
 | TODO_RESOLVE | AI 逐条解决 TODO，P0 必须解决，无依据的加，不卡全局 |
 | JUDGE | 子 Agent 盲审按模块打分，不合格只打回单模块最多3次，其余模块不动 |
 

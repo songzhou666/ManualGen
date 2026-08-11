@@ -32,7 +32,7 @@
 │ REFINE 模块精炼 [░░░░░░░░░░] 0% · │
 │ REFERENCE_CHECK 一致性检查 [░░░░░░░░░░] 0% · │
 │ INTEGRATE 文档整合 [░░░░░░░░░░] 0% · │
-│ AUDIT 质量审核(10维) [░░░░░░░░░░] 0% · │
+│ AUDIT 质量审核(10维+⑪硬门) [░░░░░░░░░░] 0% · │
 │ TODO_RESOLVE 待办解决 [░░░░░░░░░░] 0% · │
 │ JUDGE 盲审判定 [░░░░░░░░░░] 0% · │
 ├───────────────────────────────────────────────────────────────┤
@@ -83,7 +83,7 @@
 | L2_REGION | **全部页面** 每个 PAGE 至少 3 个 REGION（常见结构）全部落盘 + 批数完成率100% |
 | L3_FUNCTION | **全部区域** ≥90% FUNCTION 带 trigger_element + OPERATES_ON 三元组 + 批数完成率100% |
 | L4_OPERATION | **全部** FN ≥5 个 STEP + next_steps 完整 + 批数完成率100% |
-| L5_DETAIL | **全部实体**字段覆盖率≥80% + 权限矩阵覆盖≥70%（全部 ROLE×FUNCTION） |
+| L5_DETAIL | **全部实体**字段覆盖率≥80%（100% 为目标，剩余部分必须显式列入附录F/附录C，禁止静默缺失）+ 权限矩阵覆盖≥70%（全部 ROLE×FUNCTION，未覆盖权限同理显式披露）+ 批数完成率100% |
 | GRAPH_BUILD | 6 个 JSON 都存在；nodes ≥ MODULE+PAGE+FN 总和；cross_verified_pct ≥50% |
 | GAP_ANALYSIS | `_gap_analysis.md` P0/P1/P2/P3 四级完整；回灌决策段已写 |
 | AUTO_REVIEW | 证据不足/低置信/蛇 incomplete/权限缺/字段缺 4 类节点 100% 经过至少 1 条规则 |
@@ -92,7 +92,7 @@
 | REFINE | 每模块 fail 项 ≤3 或已自动修复 |
 | REFERENCE_CHECK | 术语一致率 & 引用有效率 ≥95% |
 | INTEGRATE | 主手册 + 附录 B~F 都产出；主手册不含 _modules 外链；core_priority 模式附录F未覆盖清单与 skipped_modules 一致 |
-| AUDIT | 10 维自评 ≥60 分（其中新增 2 个图谱维度合计≥12/20） |
+| AUDIT | 10 维自评 ≥60 分（其中新增 2 个图谱维度合计≥12/20）**+ 第 11 维覆盖完整性硬性 PASS**（L1_index 全部模块与手册章节逐一比对，未覆盖模块必须能溯源到附录 F；core_priority 模式附录F未覆盖清单与 skipped_modules 一致，否则 AUDIT 不得通过，回退 GAP_ANALYSIS） |
 | TODO_RESOLVE | P0 TODO 100% RESOLVED 或已给出 BLOCKER 说明 |
 | JUDGE | ≥70% 模块盲审 PASS；不合格但重试 ≤2 已返回 WRITE；≥3 已 DONE+ |
 
@@ -111,7 +111,7 @@
 | 流程结束 DONE | 最终进度栏（全部100% ）+ 最终报告（6层完成率+图谱质量+10维自评得分+交付路径） |
 
 ### 输出规则
-1. 每个阶段/批开始时，回复第一行写「 当前状态…批次…下一步」，立即跟进度栏
+1. 每个阶段/批开始时，回复第一行写「当前状态…批次…下一步」，立即跟进度栏
 2. 阶段/批完成时，回复末尾输出完成提示
 3. 已完成 OK，当前 >，未开始 ·，失败/阻断
 4. 六层/WRITE/JUDGE 是**批循环**，每批都要单独给提示（不只是整个阶段结束才报）
