@@ -1,5 +1,7 @@
 # ManualGen 产物模板集合
 
+> **⚠️ LEGACY（v5 保留）**：本文档为 v5 时代产物模板集（`_exploration.md`/`_extraction.md`/`_analysis.md`/`_function_survey.md` 等 Markdown 产物）。**v6 主流程（六层骨架+图谱）已改为 JSON 结构化产物（`_kb/` + `graph/` 6个JSON）**，不再使用本文模板。仅 v5 兼容路径（chunk-02/03、S1 超小项目跳层）仍引用其中 EXPLORE/EXTRACT/ANALYZE 模板。
+
 > **核心原则**：每个阶段的产物文件必须遵循对应模板。模板缺失章节 → 阻断流程。
 
 ---
@@ -14,7 +16,7 @@
 | ANALYZE | `_function_survey.md` | 本文 2.8 |
 | GAP | `_gap_analysis.md` | 本文 2.9 |
 | RESOLVE | `_resolution.md` | 本文 2.4 |
-| WRITE | `_modules/` 目录 | templates/user-manual.md(完整) |
+| WRITE | `output_user_manual/_modules/` 目录 | templates/user-manual.md(完整) |
 | REFINE | `_refine_log.md` | 本文 2.13 |
 | REFERENCE_CHECK | `_reference_check.md` | 本文 2.14 |
 | INTEGRATE | `_integration.md` | 本文 2.5 |
@@ -576,9 +578,9 @@ graph TB
 | 结果 | 数量 | 说明 |
 |------|------|------|
 | ✅ 自动解决 | {N} | 已自动填充到对应位置 |
-| 🔄 需用户确认 | {N} | 待用户决策 |
-| 👤 需人工介入 | {N} | 截图/配置等需人工完成 |
-| ❌ 无法解决 | {N} | 将降低质量评分 |
+| ⚠️ AI 推断 | {N} | AI 按规则推断补全，文档中已标注 ⚠️ |
+| 👤 需人工介入 | {N} | 截图/配置等需人工完成（仅汇总告知，不中断流程） |
+| ❌ 无法解决 | {N} | 列附录 C，不阻断 DONE |
 
 ---
 
@@ -589,10 +591,10 @@ graph TB
 |----|------|----------|-------------|
 | T-001 | {描述} | {文件路径} | {摘要} |
 
-### 🔄 需用户确认
-| ID | 描述 | 当前候选值 | 请用户确认 |
-|----|------|-----------|-----------|
-| T-002 | {描述} | {候选} | {确认项} |
+### ⚠️ AI 推断
+| ID | 描述 | 推断值 | 依据 |
+|----|------|--------|------|
+| T-002 | {描述} | {推断值} | {推断依据（同类字段/角色继承等）} |
 
 ### 👤 需人工介入
 | ID | 描述 | 建议操作 |

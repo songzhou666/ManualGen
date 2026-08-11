@@ -1,410 +1,237 @@
-# ManualGen 阶段执行规范
+# ManualGen 阶段执行规范 v6
 
 > 每个阶段必须通过检查点才能进入下一阶段。本文件是阶段执行的**唯一详细来源**（SKILL.md只列总览，不重复描述）。
->
-> 相关协议：
-> - [TODO 标记协议](todo-protocol.md) - TODO 标记规范、收集机制和 TODO_RESOLVE 执行规则
-> - [进度反馈协议](progress-protocol.md) - 可视化进度条格式和输出规则
+> v6 变化：13阶段 → 18阶段，废弃CONFIRM，新增六层 + GRAPH + AUTO_REVIEW，全流程AI自主。
 
 ---
 
-## 一、条件性跳过
+## 0. 18 阶段路由总表
 
-在进入每个阶段前，Step 3 检查跳过条件。满足条件时直接跳过该阶段，不执行任务。
+| # | 阶段 | 负责人 | 前置产物 | 阶段产物（最少） | 检查点（阻断条件） |
+|---|------|--------|---------|----------------|------------------|
+| 0 | START | 主控 | 无 | baton(START) | project_root 存在 |
+| 1 | L0_SKELETON | Skeleton + NodeWeaver | baton | `_kb/L0_skeleton.json` | modules + roles 都≥1，data_creation_chain 给出 |
+| 2 | L1_MODULE | Skeleton + NodeWeaver | L0_skeleton | `_kb/L1_modules/*.json` + `L1_INDEX.json` | 批数完成率 100%，每页都有 module_id |
+| 3 | L2_REGION | Skeleton + NodeWeaver | L1_INDEX | `_kb/L2_regions/*.json` | 每PAGE至少3个REGION（含分页/操作栏/表格区常见） |
+| 4 | L3_FUNCTION | Skeleton + NodeWeaver | L2 regions | `_kb/L3_functions/*.json` | ≥90% FUNCTION 带 trigger_element + OPERATES_ON |
+| 5 | L4_OPERATION | Skeleton + NodeWeaver | L3 functions | `_kb/L4_operations/*.json` | 每个 FN 拆≥5个 STEP，STEP next_steps 完整 |
+| 6 | L5_DETAIL | Skeleton + NodeWeaver | L4 operations | `_kb/L5_details/{ENTITY,ROLE,ELEMENT,VALIDATION,AGGREGATE}/*.json` | 核心 ENTITY.fields ≥ 5 且 validation ≥ 2 条每模块 |
+| 7 | GRAPH_BUILD | GraphBuilder + EntityAligner | 六层 | `graph/_nodes/_triples/_evidence/_snakes/_layer_index/_quality.json` （6个全） | 6个JSON都存在 + nodes ≥ MODULE数+PAGE数+FN数 |
+| 8 | GAP_ANALYSIS | 主控（含可选回灌） | graph_quality.json | `_gap_analysis.md` + `_auto_decisions.md` 回灌决策段 | 缺口分级完整（P0/P1/P2/P3都写） |
+| 9 | AUTO_REVIEW | 主控 AI 自审 | gap_analysis.md + graph | `_auto_decisions.md` 低置信裁决段 | low_confidence_nodes 占比 ≤ 15% 或已被AI处理 |
+| 10 | RESOLVE | Resolver v6 | auto_review + graph | `_resolution.md` + 各 resolution 写回 graph | HIGH 冲突 100% 有决策（不论保守解或标记⚠️） |
+| 11 | WRITE | 主控（调度 Module-Writer 子Agent） | resolution + graph | `output_user_manual/_modules/*.md` | 模块文档数=MODULE数；每个≥4KB且结构齐备（见 agent04 §自检） |
+| 12 | REFINE | 主控（调度 Refiner 子Agent） | `output_user_manual/_modules/*.md` | `_refine_log.md` | 各模块 REFINE 清单 ≥8/10（不合格自主修复后达标） |
+| 13 | REFERENCE_CHECK | 主控 Graph 反向查询 | modules + triples | `_reference_check.md` | 术语一致率 & 引用有效率 ≥ 95% |
+| 14 | INTEGRATE | Integrator v6 | `output_user_manual/_modules/` + graph + snakes | `output_user_manual/_appendix/B~E.md` + `{项目名称} 用户操作手册.md` + `_integration.md` | 主手册不含 _modules 外链；4 大附录都产出 |
+| 15 | AUDIT | 主控（10维度，含2个新增图谱） | _integration.md + graph_quality | `_audit.md` + _audit-summary.md | 10 维 ≥ 60；新增2个图谱维度权重20% |
+| 16 | TODO_RESOLVE | 主控 AI 逐条解决 | audit.md | `_todo_resolution.md` + updated todo_list | P0 TODO 100% RESOLVED 或 BLOCKER 评估完成 |
+| 17 | JUDGE | 子 Agent 盲审（模块级打回） | _judgment.md | `_judgment.md`（含 per_module_scores） | ≥70%模块 PASS；不合格且≤2次重试返回 WRITE；≥3次 DONE+⚠️ |
+| 18 | DONE | 主控 | judgment PASS | 最终交付物（项目根） + 最终报告 | 最终文件存在于项目根；无未标记 BLOCKER |
 
-### 跳过条件表
+---
+
+## 一、条件性跳过（保留旧协议，增加新跳层场景）
+
+### 跳过条件表（v6 更新）
 
 | 阶段 | 跳过条件 | 跳过处理 | 跳过产物 |
 |------|----------|----------|----------|
-| EXTRACT | 知识库（`_extraction.md`）已存在且项目代码无变更 | 使用已有 `_extraction.md` | 标记复用 |
-| ANALYZE | `_analysis.md` + `_function_survey.md` 已存在且无代码变更 | 使用已有分析产物 | 标记复用 |
-| RESOLVE | 无冲突（`_gap_analysis.md` 中 P0/P1 冲突为 0） | 直接创建 `_resolution.md` 标记"无冲突" | `_resolution.md` 内容为"无冲突" |
-| CONFIRM | 用户配置了 `auto_confirm: true`（需用户提前设置） | 自动确认，记录日志 | 跳过等待 |
-| WRITE | 模块文档已存在且无变更（增量模式） | 复用已有模块文档 | 标记复用 |
-| TODO_RESOLVE | `_todo_list.md` 为空或所有 TODO 已 RESOLVED | 创建 `_todo_resolution.md` 标记"无待办" | `_todo_resolution.md` 内容为"无待办" |
+| L1~L5 任一层 | baton.layers[Lx].status == "completed"（激活恢复） | 直接推进下层 | 标记复用 |
+| GRAPH_BUILD | graph/.graph_build_complete 存在时间 > 六层最晚 updated_at | 读已有 graph，不重建 | baton.graph.graph_builds 不增 |
+| AUTO_REVIEW | `_auto_review_complete` 标记存在（激活恢复） | 直接推进 RESOLVE | 复用已有裁决 |
+| RESOLVE | `_resolution.md` 已存在且 HIGH 冲突 0（产物判断） | 直接推进 WRITE | 标记复用 |
+| WRITE（全部） | `output_user_manual/_modules/*.md` 全部存在（产物判断） | 直接推进 REFINE | 标记复用 |
+| WRITE（模块级重写模式） | baton.rework.write_rerun_modules 非空 | **只重写指定模块**，其他跳过 | 单独模块追加写 |
+| TODO_RESOLVE | `_todo_list.md` 为空或全 RESOLVED | 写"无待办" |  |
 
-### 跳过执行方式
+### 新跳层（S1 超小项目·允许合并 6 层为 EXPLORE/EXTRACT 旧流程）
+仅限：MODULE < 3 且 PAGE < 10 的小型后台。
+```
+Master 在 L0 完成后判断：
+  if modules < 3 && pages < 10:
+    → 允许按 chunk-02 + chunk-03 的 v5 EXPLORE/EXTRACT/ANALYZE 走
+    → 完成后直接从 EXPLORE→EXTRACT→ANALYZE→（跳过 6 层直接）→ GRAPH_BUILD
+    → baton.meta.small_project_fastpath = true
+  else:
+    → 按 6 层正规流程，不允许跳层
+```
+**原因**：6 层流程虽完整，但小型项目开 6 层成本高。v5 流程对小项目足够。
 
-1. 创建阶段产物，内容为"该阶段已跳过，原因：[跳过条件]"
-2. 更新接力棒，标记该阶段为 ✅ 跳过
-3. 直接进入下一阶段
+### 跳过限制（与 v5 相同·更严格）
+- 同一阶段最多连续跳过 2 次（防止激活死循环）
+- 用户明确要求不跳过 → 禁止跳过
+- **首次运行 START 时**：所有跳过条件禁用；但 GRAPH/AUTO_REVIEW 的激活恢复标记除外（激活恢复=非首次）
 
-### 跳过限制
+---
 
-- 同一阶段最多连续跳过 2 次（避免无限循环）
-- 用户明确要求不跳过时 → 禁止跳过
-- **首次运行限制**：当接力棒状态为 START 时（首次运行），以上所有跳过条件均被禁用。首次运行必须执行全流程，不得跳过任何阶段。
-
-
-
-## 二、通用执行流程
+## 二、通用执行流程（继承 v5 · 新增「批级」自检）
 
 ```
-Step 1: 读取接力棒
-    （阻断：无接力棒→停止）
+每阶段 Master Step 流程：
+Step 1: 读取接力棒（必做，即使刚写也要重读确认）
 Step 2: 输出进度栏（按 progress-protocol.md 格式）
-Step 3: 检查跳过条件（条件满足→跳过，见"条件性跳过"章节）
-    （阻断：前置产物缺失→回退）
-Step 4: 读取前置产物
-Step 5: 执行阶段任务
+Step 3: 检查跳过条件 → 满足→跳过
+Step 4: 按 chunk-index.yaml 加载该阶段 Chunk
+Step 5: 阶段任务执行（六层/WRITE/JUDGE 是"批循环"，其他阶段是单次执行）
+
+----- 如果是批循环阶段（L0~L5, WRITE, JUDGE模块级打回）
+  for 每一批:
+    5a. 加载该批最小上下文（严禁加载其他批/其他模块源码）
+    5b. 调子 Agent（Skeleton / Module-Writer）执行该批
+    5c. 批原子落盘（先 .tmp 后 rename，见 baton-protocol §写操作协议）
+    5d. 批级质量门 run_gate_Lx / 批级文档长度检查
+    5e. 更新 baton.layers[Lx] 或 baton.rework.xxx
+    5f. 卸载该批上下文（释放字符串）
+  → 全部批完成后，层级/模块级汇总
+----- 否则（单次执行阶段：GRAPH/GAP/AUTO_REVIEW/RESOLVE/INTEGRATE/AUDIT 等）
+  5a. 调该阶段 Agent，一次性跑完
+  5b. 产物落盘
+
 Step 6: 扫描产物中 TODO: 标记 → 更新 _todo_list.md
-Step 7: 自检清单
-    （阻断：未通过→修复）
-Step 7.5: 执行验证链检查
-    ├─ 收集"计数"证据（声明数量和实际数量对比）
-    ├─ 收集"列表"证据（是否逐个列出所有项）
-    ├─ 收集"确认"证据（是否有明确的完成声明）
-    ├─ 检查流程图格式（是否使用Mermaid语法，而非ASCII文字）
-    （阻断：计数不符→修复；列表不完整→补充；未声明完成→补声明；文字图替代Mermaid→修复）
-Step 8: 更新接力棒
-Step 9: 输出阶段完成提示（按 progress-protocol.md 格式）
-Step 10: 进入下一阶段（跳转到 Step 2）
+Step 7: 阶段自检清单（按各阶段检查点）
+Step 7.5: 验证链检查（计数+列表+确认+Mermaid图）
+Step 8: 强制更新接力棒 + save_baton
+Step 9: 输出阶段完成提示
+Step 10: → 进入下一阶段
 ```
 
 ---
 
-## 二、阶段详解
+## 三、各阶段检查点详解（v6 新增/变化的部分，其余继承 v5）
 
-### 0. START
-
-**执行**：确认项目路径 → 读取/创建接力棒 → 设置状态为 EXPLORE
-**检查点**：接力棒存在且状态正确
-
-### 1. EXPLORE
-
-**前置**：接力棒状态为 EXPLORE
-**执行**：扫描项目架构 → 识别业务范围 → 识别模块 → 识别业务流程 → 识别数据依赖链
-**产物**：`_exploration.md`
-**检查点**：含模块关系图(Mermaid) + 数据依赖链 + 核心场景列表
-
-### 2. EXTRACT
-
-**前置**：`_exploration.md` 存在
-**执行**：提取API接口 → 数据库实体 → 页面路由 → 业务规则 → 操作入口
-**产物**：`_extraction.md`
-**检查点**：含API/数据库/页面三类信息 + 计数验证通过
-
-### 3. ANALYZE
-
-**前置**：`_extraction.md` 存在
-**执行**：
-1. 业务流程分析（流程图）
-2. 功能关系分析
-3. 用户场景分析
-4. **状态机分析**（每个模块的状态+流转条件+Mermaid状态图）
-5. **模块边界定义**（职责边界+输入/输出+上下游）
-6. **数据上下游分析**（生产者+消费者+流转路径+Mermaid全景图）
-
-**分批分析子流程（强制启用规则）**：
-- **强制条件**：当模块数 ≥ 3 时 → 自动启用分批分析（不可跳过）
-- **每批上限**：每批最多2个模块（不可超过）
-- **批次索引**：每批完成后必须更新 `_analysis_batch_index.md`
-- **未满足条件** → 阻断
-
-执行流程：
+### 7. GRAPH_BUILD 检查点
 ```
-Step 1: 模块分级 → 按依赖关系排序
-Step 2: 分批（每批≤2个模块）
-Step 3: 分析第1批 → 写入 _analysis.md（标记 v1-batch1）
-Step 4: 更新 _analysis_batch_index.md（必须！）
-Step 5: 分析第2批 → 读取 _analysis.md → 追加（标记 v1-batch2）
-Step 6: 更新 _analysis_batch_index.md（必须！）
-Step 7: 重复直到所有批次完成
-Step 8: 生成最终 _analysis.md（v1-final）
-Step 9: 验证 _analysis_batch_index.md 存在且完整
+阻断条件：
+  - graph/_nodes.json / _triples.json / _evidence.json / _snakes.json / _layer_index.json / _quality.json 任一缺失 → 阻断
+  - nodes 总数 < MODULE数 × 3（6层不可能只输出这么少·必有 Step1 归一化失败）→ 阻断 → 重跑 Step1
+  - snakes_discovered==0 且 scale_target_snakes≥2 且 实体数≥5 → 不阻断，但必须在 GAP 触发"GRAPH Step5 加强版"回灌
+  - entity_alignment_pending ≥ 1（Step3 合并没跑完）→ 阻断 → 返回 Step3 再跑
 ```
 
-**阻断条件**：
-- 未创建 `_analysis_batch_index.md` → 阻断
-- 批次索引不完整（缺少某批记录） → 阻断
-- 单批模块数 > 2（未说明合理原因） → 阻断
-
-**产物**：`_analysis.md` + `_function_survey.md`（功能清单+状态机+数据流合并）
-**可选产物**（仅在分批分析时生成）：
-- `_analysis_batch_index.md` - 分析批次索引
-**检查点**：含状态机图 + 边界定义 + 数据流全景图 + 计数验证
-
-### 4. GAP（完整性评估）
-
-**前置**：`_analysis.md` + `_function_survey.md` 存在
-**执行**：
-1. **功能完整性**：CRUD检查 + 入口出口检查 + 工作流检查
-2. **数据流完整性**：生产者消费者匹配 + 必填数据来源 + 链中断点
-3. **异常处理完整性**：失败反馈 + 边界条件 + 状态异常
-4. **项目形状分析**：全景图 + 功能矩阵 + 复杂度评估
-**产物**：`_gap_analysis.md`
-**检查点**：含P0/P1/P2缺失清单 + 完整性评分 + 项目形状报告
-
-### 5. CONFIRM
-
-**前置**：`_gap_analysis.md` 存在
-**执行**：展示分析摘要（模块列表+流程图数+缺失清单+评分）→ 等待用户确认
-**⚠️ 强制等待**：禁止自动进入下一阶段
-**分支**：确认→RESOLVE / 修改→ANALYZE / 取消→ABORT
-
-### 6. RESOLVE
-
-**前置**：用户已确认 + `_analysis.md` + `_gap_analysis.md` 存在
-**执行**：冲突检测(P0-P3分级) → 自动解决/标记人工
-**产物**：`_resolution.md`
-**检查点**：P0冲突已标记 + P1-P3已处理
-
-### 7. WRITE
-
-**前置**：`_resolution.md` 存在（或 `_analysis.md`）
-**执行**：
-1. **模块分级评估**：对每个模块进行分级（核心/标准/辅助），确定文档详细程度
-2. **拉起子 Agent 编写**：使用 `Task(general_purpose_task)` 为每个模块拉起独立子 Agent
-   - 子 Agent 只知道：模块名称、模块用途、用户场景
-   - 子 Agent **不知道**：API接口、数据库结构、代码实现细节
-   - 详情见 `SKILL.chunks/chunk-04-resolve-write.md`
-3. 模块间无依赖时 → 可串行分批拉起子 Agent（每批最多3个模块）
-   - **批次间状态保持协议**：
-     - 每批完成后，在接力棒中记录：`batch_written`（已完成模块列表）、`batch_pending`（待编写模块列表）、`batch_index`（当前批次号）
-     - 每批开始前，读取接力棒和已有 `_modules/` 目录
-     - 各批共享同一个 `_modules/` 目录，追加写入（不覆盖）
-     - 最后一批完成后，验证 `_modules/` 文件数与计划模块数一致
-     - 验证通过后 → 进入 REFINE 阶段
-**产物**：`_modules/*.md`
-**检查点**：子 Agent 输出不含API + 含流程图 + 含权限说明 + 含字段说明
-
-### 7.5 REFINE（精炼阶段—子Agent模式）
-
-**解决的核心问题**：同一 Agent 无法客观发现自己的错误，需要独立子 Agent 检查。
-
-**前置**：`_modules/` 目录存在且有内容
-
-**触发条件**：所有 WRITE 模块文档生成完成后自动进入
-
-**执行流程**：
+### 9. AUTO_REVIEW 检查点
 ```
-Step 1: 读取 _modules/ 目录，列出所有模块文件
-Step 2: 对每个模块文件，拉起子 Agent 检查（使用 Task general_purpose_task）
-Step 3: 子 Agent 返回 FAIL 项 → 立即修复
-Step 4: 修复后再次拉起子 Agent 确认
-Step 5: 全部 PASS 后记录到 _refine_log.md
+必做事项（不作为阻断，但必须写入 _auto_decisions.md）：
+  1. 每个 confidence<0.7 节点必须经过至少 1 条自主裁决规则处理
+  2. incomplete_snake=true 的蛇至少过一次 §Snake审阅
+  3. 权限覆盖率<60% 的模块必须尝试过"基于注解聚合+推断"补全
+  4. ENTITY.fields 缺失≥40% 的模块至少尝试"基于 JPA/MyBatis mapper XML 扫字段"补全
+阻断：
+  以上 4 类都未处理而直接推进 → 阻断
+注意：low_confidence 即使仍残留也不阻断（文档加 ⚠️ 就行），关键是 AI 必须"处理过"而非"放过"。
 ```
 
-**子 Agent 检查清单**：
-- Mermaid 流程图是否存在且链路完整
-- 是否混入 API/HTTP/技术术语
-- 操作是否基于界面描述
-- 是否标注角色权限
-- 是否含风险提示
-- 是否含前置条件和操作结果
-- 是否含字段说明表
+### 14. INTEGRATE（变化大）
+```
+继承 v5 检查项 + 新增 v6 附录要求：
+阻断：
+  - 主手册中出现指向 _modules/ 的链接 → 阻断（必须全文内联）
+  - _appendix/ 中 B、C、D、E 四个附录任意缺失 → 阻断
+  - 附录 C 不包含「仍需人工复核清单」或该清单节点数 < 实际 requires_human_review=true 节点数 → 阻断
+  - 附录 E 证据索引覆盖的证据数 < 证据总数的 80% → 阻断（其余 20% 可写"未覆盖的证据列表"作为说明）
+```
 
-**产物**：`_refine_log.md`
+### 15. AUDIT（维度从 6 → 10）
+```
+原 6 维度（权重合计 80%）：
+  1. 手册结构完整性  25%
+  2. 流程图质量     20%
+  3. 去技术化合规性  15%
+  4. 操作可执行性   15%
+  5. 角色隔离与权限  15%
+  6. 异常覆盖完整度  10%
+→ 按比例缩减到 80%（即 1→20, 2→16, 3→12, 4→12, 5→12, 6→8，合计 80）
+
+v6 新增 2 维度（+2 共 10 维度，合计 20%）：
+  9. 图谱交叉验证率（=cross_verified_nodes_pct × 10）→ 权重 10%
+  10. Snake 完整性 & 覆盖率 = min(snakes_discovered/max(2,scale_target_snakes),1.0)
+                                     ×10 - incomplete_count×0.5   → 权重 10%
+
+原 7/8 号保留为「快速入门可用性」「术语风格统一性」引用 2 维度（合计 0%→不影响评分，只作为 REFERENCE_CHECK 审计时的 PASS/FAIL 条件）
+```
+
+### 17. JUDGE（变化大·模块级打回替代全量打回）
+```
+盲审输入：只传最终手册 MD 正文（不传 graph / 不传 6 层产物）
+盲审按「模块级」评分（每模块 70 分合格，不看综合分）：
+  - per_module_scores 中 ≥70% 的模块 score ≥ 70 → 全局 PASS
+  - 某模块 < 70 & 重试 ≤2 → 写 baton.rework.write_rerun_modules=[该模块id]
+      → meta.state = WRITE（按 SKILL.chunk04 §5.3 只重写该模块）
+  - 某模块 < 70 & 重试 ≥ 3 → 不再重写，最终文档该模块末尾加 ⚠️ 提示 + 附录 C 列成 Top 未决项
+全局综合分：模块级平均分 ×0.7 + 附录质量分 ×0.2 + 概述/通用章节分 ×0.1
+→ 不再出现 v5 的 "<75% 全量回 WRITE" 的情况，最多影响单个不合格模块
+```
 
 ---
 
-### 7.7 REFERENCE_CHECK（一致性检查阶段—新增！）
-
-**解决的核心问题**：多个模块独立编写/精炼后，模块间存在术语不一致、风格不统一、交叉引用断裂等问题。
-
-**前置**：`_modules/` 目录中所有模块已完成 REFINE
-
-**执行流程**：
-```
-Step 1: 读取所有模块文档
-Step 2: 术语一致性扫描：跨模块检查同一概念是否使用同一术语
-Step 3: 交叉引用检查：模块间引用是否有效
-Step 4: 术语标准化：对不一致的术语进行统一替换
-Step 5: 交叉引用修复：修复断裂的引用链接
-Step 6: 风格统一检查：标题层级、表格格式、Markdown语法一致性
-Step 7: 写入 _reference_check.md
-```
-
-**术语一致性规则**：
-| 检查类型 | 示例（不一致） | 示例（一致） |
-|---------|---------------|-------------|
-| 功能名 | 同一功能在不同模块叫"创建"/"新增"/"新建" | 统一为"创建" |
-| 状态名 | "待审核"/"待审批"/"审核中" | 统一为"待审核" |
-| 角色名 | "管理员"/"超级管理员"/"运营主管" | 统一为引用角色矩阵 |
-| 按钮名 | "提交"/"确认"/"保存" | 引用操作入口速查表 |
-
-**交叉引用检查**：
-- 检查模块文档中所有 `详见{X模块}` 引用 → 目标模块是否存在
-- 检查所有 `{入口路径}` → 是否在对应模块的快速参考表中存在
-- 检查 `_modules/` 中各模块间的交叉引用是否一致
-
-**产物**：`_reference_check.md`
-
-```markdown
-# 一致性检查报告
-
-## 基本信息
-- 检查时间: {ISO 8601}
-- 总模块数: {N}
-
-## 术语检查结果
-| 原始术语 | 统一后术语 | 涉及模块 | 操作 |
-|---------|-----------|---------|------|
-| {旧词} | {新词} | {模块列表} | 已替换 |
-| {旧词} | {新词} | {模块列表} | 已替换 |
-
-## 交叉引用检查结果
-| 引用源 | 引用目标 | 结果 |
-|--------|---------|------|
-| {模块A} → {模块B} | 存在 | ✅ |
-| {模块C} → {模块D} | 不存在 | 🔧 已修复 |
-
-## 最终判定
-- 术语一致性：✅ 全部统一
-- 交叉引用：✅ 全部有效
-- 风格一致性：✅ All Check
-```
-
-**检查点**：
-- 术语一致率 100%
-- 交叉引用有效率 100%
-- 所有不一致已记录到 _reference_check.md
-
-### 8. INTEGRATE
-
-**前置**：`_modules/` 有内容
-**执行**：
-1. **读取所有模块文档**：从 `_modules/*.md` 读取每个模块的完整内容
-2. **按标准手册结构排序**：前置说明 → 基础操作 → 核心功能 → 异常处理 → 权限 → 业务闭环 → 常见问题 → 附则
-3. **完整内联到单文件**：将每个模块的**全部内容**直接内联到正文中
-   - ❌ **禁止** 使用"详细操作请参阅 xxx.md"类外部引用
-   - ❌ **禁止** 在正文中保留 `_modules/` 的链接
-   - ✅ **必须** 每个模块的全部操作步骤、流程图、字段说明都直接写入正文
-4. **生成封面和目录**：手册封面、版本信息、自动目录
-5. **保存中间件**：写入 `_integration.md` 到 `.agent/harness/`（供AUDIT审核用）
-6. **按项目命名输出**：另存为 `{项目名称} 用户操作手册.md` 到项目根目录（最终交付物）
-7. **最终产物**：一份完整的单文件用户手册，用户只需打开这一份文件即可完成所有操作
-**中间产物**：`.agent/harness/_integration.md`（供AUDIT审核）
-**交付产物**：`{项目根目录}/{项目名称} 用户操作手册.md`
-**检查点**：
-- 所有模块内容已完整内联到最终文件中
-- 最终文件中不含任何指向 `_modules/` 的链接、不含"详见 X.md"类引用
-- 用户仅凭这份文件即可完成所有操作，无需打开任何其他文件
-- 文件命名格式为 `{项目名称} 用户操作手册.md`
-- 文件位于项目根目录（而非 `.agent/harness/`）
-
-### 9. AUDIT
-
-**职责**：对照6维度质量体系对 `_integration.md` 做初次评分，准备审核底稿。
-
-> 注意：AUDIT 是主 Agent 自我评分，用于发现问题。
-> **真正的独立盲审在 JUDGE 阶段，由子 Agent 执行**。
-
-**前置**：`_integration.md` 存在
-**执行**：
-1. **上下文窗口检查**：评估 `_integration.md` 长度是否超出上下文窗口
-   - 超长 → 启用分卷审核策略（见下方）
-2. **6维度盲审评分**（手册结构完整性25 + 流程图质量20 + 去技术化合规性15 + 操作可执行性15 + 角色隔离与权限15 + 异常覆盖完整度10）
-3. **阻断检查**：流程图缺失 / 技术违规 / 结构缺失 → 直接阻断
-4. 分卷审核时 → 每卷独立评分 → `_audit-summary.md` 汇总加权平均
-**产物**：`_audit.md`（单卷）或 `_audit-part*.md` + `_audit-summary.md`（多卷）
-**检查点**：
-- 无阻断项触发（流程图缺失/API违规/结构缺失）→ 否则直接FAIL
-- 综合评分 >0 → 否则WRITE重写
-- 详细6维度评分标准见 `SKILL.chunks/chunk-05-audit-judge.md`
-
-### 分卷审核策略
-
-| 条件 | 策略 | 说明 |
-|------|------|------|
-| 文档 ≤ 上下文窗口 | 单卷审核 | 正常流程 |
-| 文档 > 上下文窗口 | 分卷审核 | 按模块拆分为多卷，每卷独立审核 |
-| 文档 > 上下文窗口且不可分卷 | 抽样审核 | 抽取30%模块深度审核+70%快速审核 |
-
-**分卷审核流程**：
-```
-_integration.md (总索引)
-  → _integration-part1.md → _audit-part1.md（独立评分）
-  → _integration-part2.md → _audit-part2.md（独立评分）
-  → _integration-part3.md → _audit-part3.md（独立评分）
-  → _audit-summary.md（汇总加权平均）
-```
-
-**抽样审核规则**：
-- 深度审核（30%模块）：六维度全部评分，权重70%
-- 快速审核（70%模块）：仅检查章节存在+内容非空，权重30%
-- 综合评分 = 深度审核分 × 0.7 + 快速审核分 × 0.3
-
-### 10. TODO_RESOLVE（统一解决待办项）
-
-**前置**：`_audit.md` 存在
-**执行**：
-1. 读取 `_todo_list.md`（如不存在则创建空列表）
-2. 扫描各阶段产物中的 `<!-- TODO:` 标记，补充到列表
-3. 对每个 PENDING 状态的 TODO 分类处理：
-   - 依赖条件满足 → 自动提取填充
-   - 需用户确认 → 展示给用户
-   - 需人工介入（如截图）→ 标记 MANUAL
-   - 无法解决 → 标记 BLOCKER（降低质量评分）
-4. 更新 `_todo_list.md`，写入 `_todo_resolution.md`
-**产物**：`_todo_list.md`（更新）+ `_todo_resolution.md`
-**检查点**：TODO 解决状态已标注 + BLOCKER 已评估影响
-
-### 11. JUDGE
-
-**前置**：`_audit.md` + `_todo_resolution.md` 存在
-
-**核心：拉起独立子 Agent 进行盲审（强制）**
-- 使用 Task(general_purpose_task) 拉起一个全新子 Agent
-- 子 Agent 知道最终交付件路径（项目根目录下的 `{项目名称} 用户操作手册.md`），找不到则用 `.agent/harness/_integration.md`
-- 子 Agent 不知道项目背景、不知道文档编写过程
-- 子 Agent 的返回结果是最终判定依据
-
-**判定处理规则**：
-- 子 Agent 返回 `[BLOCKER] 有` → **自动判定为FAIL**，返回 WRITE 修复
-- 子 Agent 返回 BLOCKER 但综合≥75% → 人工判断
-- 子 Agent 返回 PASS → 进入正常判定流程
-
-**正常判定**：
-- 综合≥85%且无BLOCKER → DONE
-- 综合≥85%有BLOCKER → 展示用户
-- ≥75%无BLOCKER → 等待用户（展示TODO清单）
-- <75% → WRITE修复（或ANALYZE回退，见下方多级修复回路）
-- 流程图检查：所有流程图中Mermaid图比例 < 80% → 视为不达标，返回WRITE修复
-
-**修复流程**：
-- 内容错误/遗漏 → WRITE→INTEGRATE→AUDIT→TODO_RESOLVE→JUDGE
-- 分析逻辑错误 → ANALYZE(修复)→GAP→CONFIRM→RESOLVE→WRITE→...
-- 提取信息不完整 → EXTRACT(补提取)→ANALYZE→...
-- 探索方向错误 → EXPLORE(重新探索)→EXTRACT→...
-  （禁跳过，最多2次重试）
-
-**产物**：`_judgment.md`
-
----
-
-## 四、产物依赖关系图
+## 四、产物依赖关系图 v6
 
 ```
 START
   ↓
-_exploration.md (EXPLORE)
+_kb/L0_skeleton.json (L0)
   ↓
-_extraction.md (EXTRACT)
+_kb/L1_modules/*.json + L1_INDEX.json (L1)
   ↓
-_analysis.md + _function_survey.md (ANALYZE)
+_kb/L2_regions/*.json (L2)
   ↓
-_gap_analysis.md (GAP)
+_kb/L3_functions/*.json (L3)
   ↓
-[用户确认] (CONFIRM)
+_kb/L4_operations/*.json (L4)
   ↓
-_resolution.md (RESOLVE)
+_kb/L5_details/*/*.json (L5)
   ↓
-_modules/ (WRITE)
+graph/_nodes/_triples/_evidence/_snakes/_layer_index/_quality.json (GRAPH)
+  ↓
+_gap_analysis.md (GAP) → 可能触发 增量 BACKFILL → 回到对应 Lx → GRAPH(增量) → 再 GAP
+  ↓
+_auto_decisions.md + 写入 graph 不确定标记 (AUTO_REVIEW)
+  ↓
+_resolution.md + graph 修改 (RESOLVE)
+  ↓
+output_user_manual/_modules/*.md (WRITE · 子Agent按模块并行)
   ↓
 _refine_log.md (REFINE)
   ↓
 _reference_check.md (REFERENCE_CHECK)
   ↓
-_integration.md (INTEGRATE)
+_integration.md + _appendix/B~E.md + {项目名称} 用户操作手册.md (INTEGRATE)
   ↓
-_audit.md (AUDIT)
+_audit.md + _audit-summary.md (AUDIT · 10维)
   ↓
 _todo_list.md + _todo_resolution.md (TODO_RESOLVE)
   ↓
-_judgment.md (JUDGE)
+_judgment.md (JUDGE · 模块级打回 → WRITE重写单个模块·最多3次)
+  ↓
+DONE → 最终交付
 ```
 
 ---
 
-**版本**: 5.1.0 | **更新**: 2026-05-22
+## 五、异常中断 & 激活恢复（全流程托管必备）
+
+```
+若激活恢复时 baton.meta.state ∈ {L0..L5}:
+  if baton.layers[Lx].current_batch == baton.layers[Lx].*_batches_total:
+    → 层已完成，推进下层
+  else:
+    → 从 current_batch + 1 开始跑下一批（不重跑已完成的批）
+
+若 baton.meta.state == GRAPH_BUILD:
+  if graph/.graph_build_complete 不存在 → 从 Step1 重跑（幂等）
+  else → 直接推进 GAP
+
+若 baton.meta.state == WRITE & baton.meta.sub_state=="RERUN_MODULES":
+  → 只重跑 baton.rework.write_rerun_modules 中列出的模块
+  → 跑完后把 sub_state 置为 null，继续 REFINE
+
+若 baton.meta.state == FAILED:
+  读 baton.rework.last_blocker.stage
+  → 从 last_blocker.stage 的前一个阶段重新开始（不从头 START）
+  → baton.rework.global_retries += 1（≥3 就真的 DONE_FAIL，写说明让用户处理）
+```
+
+---
+
+**版本**: 6.1.0
+**最后更新**: 2026-08-11

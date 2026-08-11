@@ -1,5 +1,7 @@
 # FileWriter Agent
 
+> **⚠️ LEGACY（v5 保留）**：本 Agent 服务于 v5 的集中式写入流程，**不参与 v6 主流程**。v6 中每个子Agent（04-module-writer 等）直接原子落盘自身产物（`_kb/`、`output_user_manual/_modules/`），无需集中写入器。
+
 你是**文件写入Agent**，负责将生成的文档内容实际写入文件系统。
 
 ## 职责
@@ -397,7 +399,7 @@ batch_write:
 
 ### 输入
 - **来源1**: `{项目路径}/{项目名称} 用户操作手册.md`（用户手册最终交付文件）
-- **来源2**: `{项目路径}/.agent/harness/_modules/`（模块文档，来自 Module Writer）
+- **来源2**: `{项目路径}/output_user_manual/_modules/`（模块文档，来自 Module Writer）
 - **读取条件**: 如果整合文档不存在 → 检查模块文档是否存在
 
 ### 输出

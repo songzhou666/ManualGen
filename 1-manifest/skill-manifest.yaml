@@ -4,10 +4,10 @@
 skill:
   id: "ManualGen"
   name: "ManualGen 智能业务分析与操作手册生成专家"
-  version: "5.1.0"
+  version: "6.1.0"
   author: "songzhou"
   created_at: "2026-04-29"
-  updated_at: "2026-05-22"
+  updated_at: "2026-08-11"
 
   # Skill分类与标签
   category: "documentation"
@@ -90,27 +90,25 @@ skill:
     - "写入文档目录"
     - "读取Git提交历史"
 
-  # 输出文件说明
+  # 输出文件说明（v6：内部引擎产物不对外交付，唯一交付物=用户操作手册）
   output_files:
     runtime_data:
       root: ".agent/harness"
-      description: "运行时期产物（接力棒/分析/模块文档/审核报告），对话生命周期内使用"
+      description: "内部引擎产物（接力棒/知识库图谱/中间报告），仅支撑生成过程与断点续跑，不是交付物，建议整体进.gitignore"
+      subdirs:
+        - "_kb/"                  # 知识库核心（L0~L5 六层 JSON + _auto_decisions.md + _backfill_log.md）
+        - "_kb/graph/"            # 知识图谱（_nodes/_triples/_evidence/_snakes/_layer_index/_quality.json 共6个）
+    delivery:
+      root: "output_user_manual"
+      description: "最终交付目录（WRITE/INTEGRATE 阶段产物）：模块文档 + B~E 附录，最终合并进主手册"
       subdirs:
         - "_modules/"
-    archived_docs:
-      root: "docs/manualgen"
-      description: "归档文档（正式发布的用户手册），建议提交到Git仓库"
-      subdirs:
-        - "user-manual/"
-        - "technical/"
-        - "api/"
-        - "workflow/"
-    internal_data:
-      root: ".trae/skills/ManualGen/9-data"
-      description: "Skill内部数据（知识库/缓存），建议加入.gitignore"
-      subdirs:
-        - "cache/"
-        - "history/"
+        - "_appendix/"
+    final_manual:
+      root: "{项目根目录}"
+      description: "唯一对外交付物（定位铁律）：{项目名称} 用户操作手册.md"
+      files:
+        - "{项目名称} 用户操作手册.md"
 
   # 兼容性
   compatibility:

@@ -1,4 +1,6 @@
-# Resolver Agent
+# Resolver Agent v2（LEGACY）
+
+> **⚠️ LEGACY（v5 保留）**：本 Agent 是 v5 的交互式冲突解决器，**不参与 v6 主流程**。v6 的冲突/缺口解决由 03-resolver-agent-enhanced.md（全自主规则）负责。仅当走 v5 兼容路径（S1 超小项目，见 chunk-03）时才可能被引用。
 
 你是**冲突解决Agent**，负责检测和解决多源信息中的冲突。
 
@@ -229,7 +231,7 @@ manual_intervention:
 
 - [ ] 接力棒已读取，当前状态为 RESOLVE
 - [ ] _analysis.md 存在且完整
-- [ ] 用户已确认分析内容（CONFIRM ✅）
+- [ ] AUTO_REVIEW 已完成（baton.auto_review_stage.last_reviewed_at 非空），4 类节点均处理
 - [ ] 项目路径已确认
 
 **如果任一不满足 → 停止执行 → 返回总控处理**

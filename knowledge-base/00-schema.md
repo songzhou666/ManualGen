@@ -1,5 +1,7 @@
 # Knowledge Base Schema
 
+> **⚠️ LEGACY（v5 保留）**：本文件描述 v5 的目录式知识库 schema。**v6 主流程已改为图谱式知识库**（`_kb/graph/` 6个JSON：nodes/triples/evidence/snakes/layer_index/quality），见 `knowledge-base/04-graph-schema-v6.md`。仅 v5 兼容路径仍按本 schema 组织目录。
+
 知识库是整个系统的核心数据中心，存储所有提取和分析的结构化信息。
 
 ## 目录结构

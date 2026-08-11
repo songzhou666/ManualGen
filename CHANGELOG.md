@@ -1,3 +1,119 @@
+# ManualGen v6.1.0 版本更新说明
+
+**版本**: 6.1.0
+**发布日期**: 2026-08-11
+**类型**: 架构升级（承接 v6.0.0）
+**兼容**: v6.x
+
+---
+
+## 📋 更新摘要
+
+v6.1 在六层骨架生长 + 知识图谱编织基础上完成**全流程自主托管**与文档一致性收口：
+
+- 🚫 **CONFIRM 阶段废除**：改为 AUTO_REVIEW 全自主 AI 裁决（低置信节点三选一：补证据/推断⚠️/附录C待复核），用户零介入；决策全量写入 `_auto_decisions.md` 可审计
+- 🧩 **JUDGE 模块级打回**：盲审从"综合分/全量重写"改为"每模块独立 100 分、70 合格、PASS_rate≥70% 放行、只打回单模块 ≤3 次"
+- 📐 **AUDIT 扩展为 10 维度**：新增 ⑨图谱交叉验证率、⑩Snake完整性与覆盖率（各 10%，合计 20%），阈值统一 ≥60/100
+- 🗂 **产物体系统一**：六层产物 → `_kb/Lx_*/*.json`；图谱 6 个 JSON（含 `_quality.json`）；WRITE 交付 → `output_user_manual/_modules/*.md`；附录 B~E 独立模板
+- 🔁 **增量回灌熔断统一**：同 LAYER+MODULE 回灌 ≥3 次熔断；JUDGE 打回模块重试 ≥3 次降级交付
+- 🧠 **知识图谱补全**：graph 落盘补齐 `_quality.json`，供 AUDIT §⑨⑩ 与 GAP 查询
+- 🛠 **Agent 补齐**：新增 12-refiner-agent（盲检）、14-judge-agent（盲审）；03-resolver 旧版改名为 v2-legacy，主流程用 enhanced 版
+
+---
+
+## 📦 新增文件
+
+| 文件路径 | 说明 |
+|----------|------|
+| `templates/appendix-B-permission-matrix.md` | 权限矩阵附录模板 |
+| `templates/appendix-C-AI-auto-decisions.md` | AI 自主决策记录附录模板 |
+| `templates/appendix-D-snake-flows.md` | Snake 跨模块操作全景附录模板 |
+| `templates/appendix-E-evidence-index.md` | 证据溯源索引附录模板 |
+| `agents/12-refiner-agent.md` | 盲检·模块级修复 Agent |
+| `agents/14-judge-agent.md` | 盲审·模块级打回 Agent |
+
+---
+
+## 🔧 修改文件
+
+| 文件路径 | 变更内容 |
+|----------|---------|
+| `SKILL.md` | 状态机 13→18 阶段；AUTO_REVIEW 取代 CONFIRM；10 维度 AUDIT；模块级 JUDGE；产物体系统一 |
+| `SKILL.chunks/chunk-05-audit-judge.md` | 新增 §TODO 节（6 类自动解 + 熔断）；AUDIT 6→10 维；JUDGE 模块级 |
+| `SKILL.chunks/chunk-07/08/09` | 六层批处理、图谱 7 步流水线（补 _quality.json）、增量回灌 |
+| `protocols/phase-protocol.md` | 18 阶段路由表 + 闸门 + 检查点统一 |
+| `protocols/baton-protocol.md` | JSON 接力棒 schema（artifacts 补 graph_quality） |
+| `agents/00-master-controller.md` | 18 阶段编排 + 批调度 + 回灌熔断 |
+| `agents/03-resolver-agent-enhanced.md` | 6 类冲突全自主规则 |
+| `agents/04-module-writer-agent.md` | graph 查询写模块 6 件套 |
+| `agents/05-integrator-agent.md` | 4 附录 B/C/D/E 整合 |
+| `agents/07-gap-analyst-agent.md` | 输入改为 graph 查询；缺口分级 P0~P3 |
+| `agents/08-skeleton-agent.md` | L0-L5 六层批处理引擎 |
+| `agents/10-graph-builder-agent.md` | 7 步流水线输出 6 个 JSON |
+| `README.md` | 结构、能力、版本同步 v6.1 |
+
+---
+
+## 🐛 修复
+
+- 附录 B~E 独立模板缺失（原为承诺未产出）→ 已补齐
+- 01-scout/02-analyst → 01-extractor/02-analyzer 命名不一致 → 已统一
+- Refiner/Judge Agent 文件缺失 → 已补齐
+- Chunk05 §TODO 缺失 → 已补
+- C1 残留 CONFIRM 引用（faq-deep/anti-patterns/todo-protocol）→ 已清除
+- WRITE 路径 `.agent/harness/_modules/` → `output_user_manual/_modules/` 全库统一
+- graph 文件数 5 vs 6（_quality.json 生产链）→ 已补
+- AUDIT 维度 6/8/10 三套说法 → 统一 10 维 ≥60
+- JUDGE 综合分 vs 模块级冲突 → 统一模块级
+- GAP/WRITE 输入 v5 产物残留 → 统一 graph 查询
+- knowledge-base 03/04 CONFIRM 残留 → AUTO_REVIEW 语义
+
+---
+
+---
+
+# ManualGen v6.0.0 版本更新说明
+
+**版本**: 6.0.0
+**发布日期**: 2026-08-10
+**类型**: 架构重构
+**兼容**: v5.x（EXPLORE/EXTRACT/ANALYZE 移至 S1 小项目捷径）
+
+---
+
+## 📋 更新摘要
+
+本次更新完成从"读完全部再统一写"到"六层骨架生长 + 知识图谱编织"的架构重构：
+
+- 🌱 **六层渐进式提取**：L0骨架→L1模块→L2区域→L3功能→L4操作→L5细节，逐层落盘 `_kb/Lx_*/*.json`，上层只读下层结构化产物
+- 🕸 **知识图谱编织**：8 类节点（MODULE/PAGE/REGION/FUNCTION/ENTITY/ROLE/ELEMENT/STEP）+ 20+ 谓词三元组 + Snake 跨模块概念链 + 证据链与置信度
+- 🔁 **增量回灌**：GAP 触发局部回灌，避免整层重跑；熔断防死循环
+- 🏭 **批处理引擎**：L1 每批 2-3 模块、L2 每批 3 页、L3 每批 6 区域、L4 每批 4 功能、L5 每批 5 操作
+- ⚙️ **13→18 阶段状态机**：GRAPH_BUILD/GAP_ANALYSIS/AUTO_REVIEW 等新阶段
+
+---
+
+## 📦 新增文件
+
+| 文件路径 | 说明 |
+|----------|------|
+| `SKILL.chunks/chunk-07-skeleton-growth.md` | 六层批处理细节 |
+| `SKILL.chunks/chunk-08-knowledge-graph.md` | 图谱构建 7 步流水线 |
+| `SKILL.chunks/chunk-09-incremental-refine.md` | 增量回灌与熔断 |
+| `knowledge-base/03-layered-architecture.md` | 六层架构规范 |
+| `knowledge-base/04-graph-schema-v6.md` | 图谱 schema v6 |
+| `protocols/baton-protocol.md` | JSON 接力棒协议 |
+| `protocols/graph-protocol.md` | 图谱构建协议 |
+| `agents/08-skeleton-agent.md` | 六层批处理引擎 |
+| `agents/09-node-weaver-agent.md` | 节点级信息提取 |
+| `agents/10-graph-builder-agent.md` | 图谱 7 步流水线 |
+| `agents/11-entity-aligner-agent.md` | 实体对齐 + 置信传播 |
+| `knowledge-base/01-context-manager.md` | 上下文分块管理 |
+
+---
+
+---
+
 # ManualGen v5.1.1 版本更新说明
 
 **版本**: 5.1.1

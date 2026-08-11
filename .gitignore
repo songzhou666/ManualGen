@@ -6,3 +6,9 @@ Thumbs.db
 # Temp files
 *.tmp
 *.log
+# 内部引擎产物（定位铁律：不对外交付、可整体忽略）
+.agent/
+# 评估与打包临时目录
+.medic/
+__pycache__/
+*.pyc

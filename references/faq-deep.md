@@ -164,9 +164,9 @@ ManualGen 支持跨 Session 续跑（关闭对话后重新打开，状态自动�
 
 | 条件 | 说明 | 检查方式 |
 |------|------|---------|
-| 接力棒存在 | `_baton.md` 文件存在且状态有效 | AI 入口清单检查 |
+| 接力棒存在 | `_baton.json` 文件存在且状态有效 | AI 入口清单检查 |
 | 前置产物完整 | 已完成的阶段产物都存在 | AI 逐个检查产物文件 |
-| 项目路径不变 | 续跑时的项目路径与之前一致 | 用户确认路径 |
+| 项目路径不变 | 续跑时自动沿用 baton.meta.project_path（无需用户确认） |
 
 ### 续跑流程
 
@@ -212,26 +212,12 @@ ManualGen 的输出格式由 `templates/user-manual.md` 控制。修改该文件
 
 ### 自然语言定制
 
-在 CONFIRM 阶段，用户可通过自然语言指定偏好：
+在启动 ManualGen 时，用户可通过自然语言直接指定偏好（无需等 AUTO_REVIEW 阶段），AI 在后续 WRITE + TODO 阶段优先应用：
 
-| 偏好类型 | 示例 |
-|---------|------|
-| 文档风格 | "手册写得简洁一点，不要太多技术细节" |
-| 角色聚焦 | "只写销售人员的操作部分" |
-| 模块优先级 | "重点写客户管理和订单模块" |
-| 输出格式 | "用 Markdown 格式输出" |
-| 深度级别 | "每个操作至少写 5 步" |
-
-AI 会在 CONFIRM 阶段汇总定制化偏好，确认后传递到后续阶段。
-
-### 限制
-
-- 无法自定义产物目录（统一放在 `.agent/harness/`）
-- 无法绕过隐私保护规则
-- 无法改变状态机流程阶段
+AI 会把用户给出的偏好写入 baton.custom_preferences 对象，在 WRITE 阶段 Module-Writer、TODO 阶段 AI 解路径时都会读取并应用。
 
 ### 相关
-- 相关阶段：CONFIRM, WRITE
+- 相关阶段：启动时输入 → WRITE → TODO（全流程不中断）
 - 相关文档：`templates/user-manual.md`
 - 相关文档：SKILL.md 中的"定制化指南"章节
 
@@ -277,25 +263,43 @@ AI 会在 CONFIRM 阶段汇总定制化偏好，确认后传递到后续阶段�
 - **多项目隔离**：`{项目路径}/` 前缀天然隔离不同项目
 - **隐私保护**：`.agent/harness/` 路径建议加入 `.gitignore`，避免产物提交到公开仓库
 
-### 目录结构
+### 目录结构（v6）
 
 ```
 {项目路径}/.agent/harness/
-├── _baton.md                 # 接力棒
-├── _exploration.md           # 探索报告
-├── _extraction.md            # 提取结果
-├── _analysis.md              # 分析报告
-├── _function_survey.md       # 功能调查
-├── _gap_analysis.md          # 完整性评估
-├── _resolution.md            # 冲突解决
-├── _modules/                 # 模块文档（.md 文件）
-├── _refine_log.md            # 精炼日志
-├── _reference_check.md       # 一致性检查报告
-├── _integration.md           # 整合手册（中间产物）
-├── _audit.md                 # 审核报告
-├── _todo_list.md             # TODO 列表
-├── _todo_resolution.md       # TODO 解决报告
-└── _judgment.md              # 判定结果
+├── _baton.json                # 接力棒（v6 改为 JSON，含 18 阶段进度+批进度+回灌状态）
+├── _kb/                       # 知识底座（六层产物）
+│   ├── L0_skeleton.json       # L0 骨架（模块/角色/依赖）
+│   ├── L1_modules/*.json      # L1 模块（每批 2-3 模块）
+│   ├── L2_pages/*.json        # L2 页面
+│   ├── L3_regions/*.json      # L3 区域
+│   ├── L4_functions/*.json    # L4 功能
+│   ├── L5_details/*.json      # L5 细节（ENTITY/ROLE/ELEMENT/字段详情/权限矩阵/按钮状态）
+│   ├── graph/                 # 知识图谱（6 个 JSON）
+│   │   ├── _nodes.json        #   8类节点归一化
+│   │   ├── _triples.json      #   三元组
+│   │   ├── _evidence.json     #   证据+反向索引
+│   │   ├── _snakes.json       #   跨模块概念链
+│   │   ├── _layer_index.json  #   层级完成度
+│   │   └── _quality.json      #   质量评估汇总
+│   ├── _gap_analysis.md       # 完整性评估
+│   ├── _auto_decisions.md     # AI 自主裁决记录（替代 v5 人工确认）
+│   └── _backfill_log.md       # 增量回灌日志
+├── _refine_log.md             # 精炼日志
+├── _reference_check.md        # 一致性检查报告
+├── _integration.md            # 整合手册（中间产物）
+├── _audit.md                  # 审核报告
+├── _todo_list.md              # TODO 列表
+├── _todo_resolution.md        # TODO 解决报告
+└── _judgment.md               # 盲审判定结果
+
+{项目路径}/output_user_manual/       # ===== 最终交付目录 =====
+├── _modules/*.md              # WRITE 阶段模块文档
+└── _appendix/                 # INTEGRATE 阶段附录
+    ├── appendix-B-permission-matrix.md
+    ├── appendix-C-AI-auto-decisions.md
+    ├── appendix-D-snake-flows.md
+    └── appendix-E-evidence-index.md
 ```
 
 **最终交付物**（`{项目名} 用户操作手册.md`）输出到**项目根目录**，不在 `.agent/harness/` 下。
@@ -334,6 +338,7 @@ AI 会在 CONFIRM 阶段汇总定制化偏好，确认后传递到后续阶段�
 - **不自动覆盖旧手册**：新运行会完整产出，旧手册不会被自动删除
 - **同路径覆盖**：如果直接运行完整流程，同项目路径下的产物会被覆盖
 - **接力棒重置**：新项目路径下没有接力棒时，从 START 开始
+- **⚠️ 多 Skill 并行冲突（平台级约定）**：ManualGen、scout、parse 等 harness 型 Skill **共用** `{项目路径}/.agent/harness/_baton.json` 命名空间。**同一项目请勿并行运行多个 harness 型 Skill**，否则会互相覆盖接力棒导致断点错乱。若必须先后使用，务必在切换 Skill 前将接力棒归档（改名保存），或使用不同项目目录。这是平台 harness 共享区约定，非 ManualGen 缺陷。
 
 ### 相关
 - 相关阶段：START（全阶段）
@@ -343,18 +348,27 @@ AI 会在 CONFIRM 阶段汇总定制化偏好，确认后传递到后续阶段�
 
 ## Q10：如何验证 ManualGen 输出的质量？
 
-ManualGen 通过 6 维度审核体系 + JUDGE 盲审两层机制保障输出质量。
+ManualGen 通过 10 维度审核体系（AUDIT）+ JUDGE 模块级盲审两层机制保障输出质量。
 
-### 第一层：6 维度自评（AUDIT 阶段）
+### 第一层：10 维度自评（AUDIT 阶段）
+
+原 6 维（权重合计 80%）：
 
 | # | 维度 | 权重 | 检查内容 |
 |:-:|:-----|:---:|:---------|
-| ① | 手册结构完整性 | 25% | 是否包含前置说明、基础操作、核心功能、全流程、异常处理、权限矩阵、附录 |
-| ② | 流程图质量 | 20% | 分类绘制、用户语言、链路完整、标注清晰、一一对应 |
-| ③ | 去技术化合规性 | 15% | 无 API 端点、无 HTTP 代码、无技术堆砌、基于界面操作 |
-| ④ | 操作可执行性 | 15% | 功能简介、权限说明、前置条件、分步操作、字段说明、风险提示 |
-| ⑤ | 角色隔离与权限清晰 | 15% | 每模块标注角色、全局权限矩阵、权限流转图、角色边界清晰 |
-| ⑥ | 异常覆盖完整度 | 10% | 报错汇总、操作异常处理、边界问题说明、紧急处理流程 |
+| ① | 手册结构完整性 | 20% | 是否包含前置说明、基础操作、核心功能、全流程、异常处理、权限矩阵、附录 |
+| ② | 流程图质量 | 16% | 分类绘制、用户语言、链路完整、标注清晰、一一对应 |
+| ③ | 去技术化合规性 | 12% | 无 API 端点、无 HTTP 代码、无技术堆砌、基于界面操作 |
+| ④ | 操作可执行性 | 12% | 功能简介、权限说明、前置条件、分步操作、字段说明、风险提示 |
+| ⑤ | 角色隔离与权限清晰 | 12% | 每模块标注角色、全局权限矩阵、权限流转图、角色边界清晰 |
+| ⑥ | 异常覆盖完整度 | 8% | 报错汇总、操作异常处理、边界问题说明、紧急处理流程 |
+
+⑦⑧ 为保留的引用维度（权重 0%，仅作 REFERENCE_CHECK 的 PASS/FAIL 条件）：快速入门可用性、术语风格统一性；**v6 真正新增的 2 个计分维度是 ⑨⑩（合计 +20%）**：
+
+| # | 维度 | 权重 | 检查内容 |
+|:-:|:-----|:---:|:---------|
+| ⑨ | 图谱交叉验证率 | 10% | cross_verified_nodes_pct×10（节点双源验证比例） |
+| ⑩ | Snake 完整性 & 覆盖率 | 10% | min(snakes_discovered/目标数,1)×10 − incomplete×0.5 |
 
 ### 第二层：JUDGE 盲审
 

@@ -1,5 +1,7 @@
 # 知识累加机制
 
+> **⚠️ LEGACY（v5 保留）**：本文件描述 v5 的 Markdown 会话快照累加机制。**v6 主流程改为增量回灌机制**（`protocols/todo-protocol.md` + chunk-09 + `_kb/_backfill_log.md`），按 LAYER+MODULE 局部重做。本文仅对 v5 兼容路径（02-analyzer-agent 分批分析）生效。
+
 > **核心原则**：每次分析都在前一次基础上累加，禁止从零开始。
 
 ---

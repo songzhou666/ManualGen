@@ -1,23 +1,61 @@
-# SKILL.md 分块索引 — 按需加载
+# SKILL.md 分块索引 — 按需加载 v6
+
+> v6 新增 3 个核心 Chunk（07骨架生长 / 08图谱构建 / 09增量回灌），原 02/03 Chunk 保留兼容但不再是主力。
 
 | ID | 文件 | 大小目标 | 说明 | 加载策略 |
 |----|------|----------|------|----------|
-| 01 | chunk-01-overview.md | ~2KB | 状态机自动驱动+阶段概述 | always（无条件） |
-| 02 | chunk-02-explore-extract.md | ~4KB | EXPLORE + EXTRACT 阶段 | 仅EXTRACT阶段 |
-| 03 | chunk-03-analyze-gap.md | ~4KB | ANALYZE + GAP 阶段 | 仅ANALYZE阶段 |
-| 04 | chunk-04-resolve-write.md | ~4KB | RESOLVE + WRITE + INTEGRATE | 进入RESOLVE/WRITE时 |
-| 05 | chunk-05-audit-judge.md | ~3KB | AUDIT + JUDGE | 进入AUDIT时 |
-| 06 | chunk-06-privacy-security.md | ~2KB | 隐私保护+安全规则 | always（无条件） |
-| 07 | templates/flowchart-spec.md | ~3KB | 流程图规范（三种类型+审核标准） | 进入WRITE/REFINE时 |
+| 01 | chunk-01-overview.md | ~2KB | 状态机总述+激活入口+自检闭环 | always（无条件） |
+| 02 | chunk-02-explore-extract.md | ~4KB | 旧 EXPLORE+EXTRACT（v5兼容保留·小项目可直接走） | S1超小项目跳层时用 |
+| 03 | chunk-03-analyze-gap.md | ~4KB | 旧 ANALYZE + GAP（v5兼容· v6 GAP 只用其中缺口分级+评分规则） | S1小项目用，大项目仅GAP加载缺口部分 |
+| 04 | chunk-04-resolve-write.md | ~5KB | RESOLVE + WRITE/REFINE/INTEGRATE（v6升级版：从graph查询，不读_extraction） | 进入 RESOLVE / WRITE 时 |
+| 05 | chunk-05-audit-judge.md | ~4KB | AUDIT（10维度，含图谱2个新维度） + §TODO + JUDGE（盲审） | 进入 AUDIT 时 |
+| 06 | chunk-06-privacy-security.md | ~2KB | 隐私保护+安全脱敏+证据加密 | always（无条件） |
+| 07 | chunk-07-skeleton-growth.md | ~12KB | 六层骨架生长执行细则 §L0~§L5 + §自主裁决规则 | L0~L5每层进入时加载对应§节，§自主裁决在 AUTO_REVIEW 与用户主动追问进度时加载 |
+| 08 | chunk-08-knowledge-graph.md | ~8KB | GRAPH_BUILD 7步流水线 + Snake发现 + 增量构建规则 | 进入 GRAPH_BUILD 时全量加载 |
+| 09 | chunk-09-incremental-refine.md | ~6KB | 增量回灌触发 + 局部重做算法 + 熔断防死循环 | GAP 发现缺口、JUDGE打回、回灌触发时加载 |
+| 10 | templates/flowchart-spec.md | ~3KB | Mermaid流程图规范 + Snake跨模块全景图规范 | 进入 WRITE / REFINE 时 |
 
-## 加载规则
+---
 
-| 场景 | 加载的chunk |
-|------|-------------|
-| 初始化/状态机引导 | 01, 06 |
-| 执行 EXPLORE/EXTRACT | 01, 06, 02 |
-| 执行 ANALYZE/GAP | 01, 06, 03 |
-| 执行 RESOLVE/WRITE | 01, 06, 04 |
-| 执行 REFINE/REFERENCE_CHECK | 01, 06, 04(部分), 07 |
-| 执行 INTEGRATE | 01, 06, 04(整合部分), 07 |
-| 执行 AUDIT/TODO_RESOLVE/JUDGE | 01, 06, 05 |
+## 加载矩阵（v6 主力流程）
+
+| 场景 / 阶段 | 加载的 Chunk | 说明 |
+|-------------|-------------|------|
+| 初始化 / 激活入口 | 01, 06 | always + 隐私 |
+| L0_SKELETON（搭骨架） | 01, 06, 07§L0 | 只加载07的L0节 |
+| L1_MODULE（模块分批） | 01, 06, 07§L1 | 只加载07的L1节，可卸载§L0 |
+| L2_REGION（页面分批） | 01, 06, 07§L2 | 只加载07的L2节，可卸载上层 |
+| L3_FUNCTION（区域分批） | 01, 06, 07§L3 | 只加载07的L3节，可卸载上层 |
+| L4_OPERATION（操作分批） | 01, 06, 07§L4 | 只加载07的L4节 · **不带源码** |
+| L5_DETAIL（细节分批） | 01, 06, 07§L5 | 只加载07的L5节 · 局部精读源码 |
+| GRAPH_BUILD（7步） | 01, 06, 08 | 整章加载，可完全卸载 07 |
+| GAP_ANALYSIS | 01, 06, 03§缺口分级, 09（若触发回灌） | AI自主判断是否回灌 |
+| AUTO_REVIEW | 01, 06, 07§自主裁决, 08§Snake审阅 | AI自主裁决，不打断用户 |
+| RESOLVE | 01, 06, 04§RESOLVE | AI自主分级解决冲突 |
+| WRITE | 01, 06, 04§WRITE, 10 | 子Agent隔离上下文 · 从graph查 |
+| REFINE | 01, 06, 04§REFINE | 子Agent盲检 |
+| REFERENCE_CHECK | 01, 06, 04§REFERENCE_CHECK | 主控自检 |
+| INTEGRATE | 01, 06, 04§INTEGRATE, 10 | 含Snake附录+AI决策附录+权限矩阵 |
+| AUDIT | 01, 06, 05§AUDIT(10维度) | 主控自评（含图谱质量2个新维度） |
+| TODO_RESOLVE | 01, 06, 05§TODO | AI自主逐条解决 |
+| JUDGE | 01, 06, 05§JUDGE | 子Agent盲审 · 不合格打回模块级 |
+| GAP 缺口严重 / JUDGE打回 | 追加 09 | 增量回灌 / 局部重做 |
+| 用户主动追问进度 / 暂停 | 追加 07§自主裁决 | 展示仪表盘 / 最近 20 条 AI 裁决 / 低置信项 |
+
+---
+
+## Chunk 分段加载约定
+
+Chunk 07 / 08 / 09 / 03 / 04 / 05 的节标题都用 `§节名` 标记，主控按节加载，避免整章12KB全部塞入上下文：
+- Chunk 07: §L0, §L1, §L2, §L3, §L4, §L5, §自主裁决
+- Chunk 08: Step1~Step7, §Snake审阅
+- Chunk 04: §AUTO_REVIEW(自主裁决速查·详见Chunk07), §RESOLVE, §WRITE, §REFINE, §REFERENCE_CHECK, §INTEGRATE
+- Chunk 05: §AUDIT(10维度), §TODO, §JUDGE
+
+> 上下文预算紧张时的卸载顺序（从先到后）：
+> Chunk 02 → 03 → 09 → 07过期节 → 08（GRAPH跑完后可卸） → 04（到AUDIT可卸）→ 只保留 01+06
+
+---
+
+**版本**: 6.1.0-index
+**最后更新**: 2026-08-11
