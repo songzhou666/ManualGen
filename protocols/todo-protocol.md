@@ -247,5 +247,5 @@ Step 8: 输出 _todo_resolution.md（解决报告）
 ---
 
 **协议版本**: 1.1.0
-**所属Skill**: ManualGen v6.2.0
+**所属Skill**: ManualGen v6.3.0
 **创建日期**: 2026-05-22

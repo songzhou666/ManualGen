@@ -4,7 +4,7 @@
 skill:
   id: "ManualGen"
   name: "ManualGen 智能业务分析与操作手册生成专家"
-  version: "6.2.0"
+  version: "6.3.0"
   author: "songzhou"
   created_at: "2026-04-29"
   updated_at: "2026-08-11"

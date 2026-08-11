@@ -17,7 +17,7 @@
  {
  "path": "_kb/L3_functions/REG_001_搜索区.json", // L3 按 REGION 粒度落盘（REG_xxx_{区域名}.json）
  "content": {
- "schema_version": "6.2.0",
+ "schema_version": "6.3.0",
  "module": { "module_id": "MOD_002", "name": "订单管理", "display_name": "订单管理" },
  "functions": [ /* FUNCTION v6 节点 */ ],
  "elements": [ /* ELEMENT v6 节点 */ ],
@@ -164,5 +164,5 @@ ROLE → ROLE_ADMIN, ROLE_USER ...（按原字符串规范）
 
 ---
 
-**版本**: 6.2.0-agent09
+**版本**: 6.3.0-agent09
 **最后更新**: 2026-08-11

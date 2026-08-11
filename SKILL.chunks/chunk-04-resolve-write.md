@@ -19,7 +19,7 @@
 
 **分支**（AI 自主决定，不等用户）：
 - low_confidence_nodes 占比 ≤ 15% 或已处理 → 进入 RESOLVE
-- 仍 > 15% 且 GAP 判定 P0 级 → 触发增量回灌（回到对应 Lx 补证据 → 再回 GRAPH → 再 GAP → 再 AUTO_REVIEW；熔断=3次后自动放行并附录 C 列示，与 baton-protocol §六/chunk-09 §五一致）
+- 仍 > 15% 且 GAP 判定 P0 级 → 触发增量回灌（回到对应 Lx 补证据 → 再回 GRAPH → 再 GAP → 再 AUTO_REVIEW；熔断=3次后自动放行并附录 C 列示，与 chunk-09 §五一致）
 
 ---
 
@@ -194,6 +194,21 @@
 - 所有 FAIL 修复后 → 重新拉起子 Agent 确认变 PASS
 - 全部 PASS 后 → 记录到 `_refine_log.md`
 
+### v6.3 GW 机器校验（子 Agent 检查之外的强制闭环）
+
+> **为什么需要**：子 Agent 的"API 内容"检查是 AI 自评，实测会放水（E:\test_agent 手册 93 处
+> API 泄漏在 REFINE 后仍通过）。子 Agent 检查只覆盖"内容质量"（软约束），
+> **技术泄漏判定必须由机器执行**（强约束）。
+
+```
+1. 子 Agent 全部 PASS 后，主控运行：
+   '{"project_path": "<项目>", "manual_path": "<手册或模块文件>"}' | python run.py scan_tech
+   （工作目录：{Skill 目录}/manualgen_tools）
+2. scan_tech 输出 P0 命中数 > 0 → GW 不通过 → 打回 REFINE 重写对应模块，禁止进入 REFERENCE_CHECK
+3. scan_tech 输出 P0 = 0 → GW 通过，记录到 _refine_log.md
+4. 最终手册合并完成后（INTEGRATE），必须再对最终手册运行一次 scan_tech 确认 P0=0
+```
+
 ### 产物
 `_refine_log.md`
 
@@ -234,6 +249,15 @@
 **3. 根目录输出 — 用户好找**
 - 输出到项目根目录（`{项目路径}/`）
 - 不要放在 `.agent/harness/` 里
+
+**4. 由 _modules 合并生成（v6.3 强制 · 禁止另起炉灶）**
+- 最终手册**必须**由 `output_user_manual/_modules/*.md` 的内容合并而成
+- 若 `_modules/` 不存在或为空 → INTEGRATE 直接阻断（说明 WRITE 未执行，回 WRITE 补跑）
+- 合并完成后必须运行机器校验（工作目录 manualgen_tools）：
+  - `'{"project_path":"<项目>","manual_path":"<最终手册>"}' | python run.py scan_tech` → P0 命中数必须为 0
+  - `'{"project_path":"<项目>"}' | python run.py coverage` → 无未覆盖模块
+  - `'{"project_path":"<项目>"}' | python run.py verify` → 必须 PASS
+  - 任一 FAIL → 不得交付，回对应阶段修复
 
 ### 执行内容
 - 模块内容完整内联

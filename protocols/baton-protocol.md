@@ -4,6 +4,7 @@
 > **参考设计**：skill-medic 的单点写 + 断点续跑 + 批进度追踪
 > **变更点**：v5 用 Markdown 表格接力棒（人类可读但机器难解析），v6 统一为 JSON（结构化工期管理）
 > **v6.2 全量覆盖铁律**：默认 `meta.work_mode="full"`，各层 `*_batches_total` 在进入该层时按父层节点数推导（如 L2_total = ceil(页面总数/3)）并写入，**只增不减**；`*_batches_done < *_batches_total` 时禁止推进到下一阶段。仅当用户在对话中显式点名模块范围才可置 `work_mode="core_priority"`，此时 `batch.skipped_modules` 记录未覆盖模块，交付强制进附录 F。
+> **v6.3 CLI 硬校验（最高优先级）**：接力棒中所有计数（`*_batches_done` / `*_completed` / `graph.nodes_total` 等）**必须由 `manualgen_tools/run.py baton_fix` 从磁盘产物反推写入**，AI 禁止手填数字。任何声称"某层完成"前，必须运行 `run.py verify` 且输出 PASS，否则视为伪造接力棒。
 
 ---
 
@@ -13,7 +14,7 @@
 {
  "meta": {
  "skill": "ManualGen",
- "version": "6.2.0",
+ "version": "6.3.0",
  "state": "START|L0_SKELETON|L1_MODULE|L2_REGION|L3_FUNCTION|L4_OPERATION|L5_DETAIL|GRAPH_BUILD|GAP_ANALYSIS|AUTO_REVIEW|RESOLVE|WRITE|REFINE|REFERENCE_CHECK|INTEGRATE|AUDIT|TODO_RESOLVE|JUDGE|DONE|FAILED",
  "sub_state": null, // 阶段内子状态，如 "PROCESSING_BATCH_2"；各阶段主控统一读写 meta.state，不得使用其他别名
  "session_id": "manual_20260811_143000",
@@ -277,11 +278,15 @@
 - 所有子Agent（Skeleton/NodeWeaver/GraphBuilder/EntityAligner/模块Writer）**只读不写**
 - 子Agent完成后把结果回报给主控，主控写入 `layers.*` / `graph.*` / `batch.*`
 - 任何子Agent直接改 `_baton.json` → 判定违规，该子Agent产出全部作废重来
+- **v6.3：主控写入的计数（`*_batches_done` / `*_completed` / `graph.nodes_total` / `triples_total` / `evidence_total` / `snakes_total`）必须来自 `run.py baton_fix` 的磁盘反推结果**，不得凭记忆手填。先落盘产物 → 运行 baton_fix → 用其输出写接力棒。
 
 ### 2. 阶段闸门（Gates）
 进入下一阶段/下一层前必须验证：
 ```
-验证顺序：
+验证顺序（v6.3，机器判定优先）：
+ 0. 运行 `'{"project_path": "<项目路径>"}' | python run.py verify`（工作目录 manualgen_tools）
+    - verify 输出 FAIL → 禁止推进，按 FAIL 清单回退补齐（产物缺失→补产物；计数不一致→baton_fix 反推）
+    - verify 输出 PASS → 继续以下 AI 判定
  1. progress 中当前阶段是否为 "completed"
  2. 当前层 quality_score ≥ 最低阈值（L0≥80, L1≥75, L2≥70, L3≥65, L4≥65, L5≥60）
  3. 该层 artifacts 路径下文件非空（逐个打开验证，不看文件名看内容）
@@ -293,16 +298,18 @@
 ### 3. 批进度规则
 每层每批完成后，主控必须：
 - 把当前批所有节点**立即落盘**到对应 `Lx_xxx/*.json` 文件
-- 同步更新 `graph.nodes_total` / `triples_total` / `evidence_total` 计数
+- **运行 `run.py baton_fix` 从磁盘反推** `graph.nodes_total` / `triples_total` / `evidence_total` 与 `layers.Lx.*_completed` 计数（v6.3，禁止手填）
 - 在 `layers.Lx.current_batch` 写入下一个待处理批次
-- 把 `layers.Lx.regions_batches_done` 等计数 +1
+- `layers.Lx.*_batches_done` 按批次推进后，**必须运行 `run.py verify` 校验计数与磁盘一致**（batch 进度无法从磁盘反推，由 verify 兜底）
 
 ### 4. 断点续跑
 会话中断后再次激活时：
 ```
 1. 读 _baton.json
 2. 找到 progress 中第一个非 "completed" 的阶段（从该阶段开始续跑）
-3. 校验：progress 标记 "completed" 但对应 artifacts 缺失 → 回退到该层重做，记入 rework.history
+3. 运行 `run.py verify`：校验"声称 completed 的层"产物是否真实存在、计数是否与磁盘一致（v6.3 强制）
+   - verify FAIL → 按 FAIL 清单回退补齐，记入 rework.history
+   - 产物缺失 → 回退该层重做；计数造假 → 先 baton_fix 反推修正
 4. 已标记 "completed" 的层逐个验证 `batches_done == batches_total` 且 quality_score ≥ 层阈值；任一不满足 → 回退该层重做（不信任旧标记，防止断点恢复后带病推进）
 5. 含闸门的阶段（GATE_*）：如果标记 "completed" → 强制重新跑闸门验证
 6. 对 L3/L4/L5：按 layers.Lx.current_batch 从该批次继续，不重跑已完成批次
@@ -366,5 +373,57 @@ JUDGE 通过后：
 
 ---
 
-**版本**: 6.2.0-json
+## 四、v6 产物清单（机器校验依据 · run.py check_deliverables 逐项检查）
+
+> 主控每完成一个阶段，产物必须**真实落盘**（空目录不算）。以下清单是 `run.py check_deliverables`
+> 的判定依据，也是断点续跑/闸门校验的文件来源。产物缺失 = 该阶段未完成 = 阻断推进。
+
+### 4.1 六层提取产物（`{项目}/.agent/harness/_kb/`）
+
+| 层 | 产物路径 | 完成标准 |
+|----|---------|---------|
+| L0 | `L0_skeleton.json` + `L0_skeleton_report.md` | 模块/角色/依赖/数据链非空 |
+| L1 | `L1_index.json` + `L1_modules/*.json` | 每个模块 1 个 json，文件数 = 模块数 |
+| L2 | `L2_regions/*.json` | 每页 1 个 json，非空 |
+| L3 | `L3_functions/*.json` | 每区域 1 个 json，功能点带 trigger_element 证据 |
+| L4 | `L4_operations/*.json` | 每功能 1 个 json，≥5 步 + 流程图 |
+| L5 | `L5_details/ENTITY|ROLE|ELEMENT|VALIDATION|AGGREGATE/*.json` | 五类子目录均非空 |
+
+### 4.2 图谱产物（`_kb/graph/`，6 文件全在）
+
+| 文件 | 内容 |
+|------|------|
+| `_nodes.json` | 归一化节点（8 类） |
+| `_triples.json` | 三元组关系（20+ 谓词） |
+| `_evidence.json` | 证据溯源 |
+| `_snakes.json` | Snake 跨模块链 |
+| `_layer_index.json` | 层级完成度 + 质量索引 |
+| `_quality.json` | 质量评估汇总 |
+
+### 4.3 阶段报告产物（`{项目}/.agent/harness/`）
+
+| 阶段 | 文件 |
+|------|------|
+| GAP_ANALYSIS | `_gap_analysis.md` |
+| AUTO_REVIEW | `_kb/_auto_decisions.md` |
+| RESOLVE | `_resolution.md` |
+| REFINE | `_refine_log.md` |
+| REFERENCE_CHECK | `_reference_check.md` |
+| INTEGRATE | `_integration.md` |
+| AUDIT | `_audit.md` |
+| TODO_RESOLVE | `_todo_resolution.md` |
+| JUDGE | `_judgment.md` |
+| 回灌记录 | `_kb/_backfill_log.md` |
+
+### 4.4 交付产物（`{项目}/`）
+
+| 产物 | 路径 | 完成标准 |
+|------|------|---------|
+| 模块文档 | `output_user_manual/_modules/*.md` | 每模块 ≥1 篇（WRITE 隔离机制的硬证据） |
+| 附录 B~F | `output_user_manual/_appendix/appendix-{B,C,D,E,F}-*.md` | 权限矩阵/AI决策/Snake/证据索引/未覆盖清单 |
+| 最终手册 | `{项目根目录}/{项目名} 用户操作手册.md` | 必须由 _modules 合并而成，禁止另起炉灶直接写 |
+
+---
+
+**版本**: 6.3.0-json
 **最后更新**: 2026-08-11

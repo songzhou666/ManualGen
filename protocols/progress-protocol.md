@@ -137,6 +137,6 @@ Step 11: 下一批 / 下一阶段
 
 ---
 
-*协议版本: 6.2.0-progress*
-*所属Skill: ManualGen v6.2.0*
+*协议版本: 6.3.0-progress*
+*所属Skill: ManualGen v6.3.0*
 *最后更新: 2026-08-11*

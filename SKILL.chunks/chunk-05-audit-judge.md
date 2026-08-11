@@ -69,21 +69,24 @@
 | **⑪ 覆盖完整性** | 0% | 把 `_kb/L1_index.json` 的全部模块与手册章节逐一比对：<br>1. 全量模式（`meta.work_mode="full"`）：**100% 模块**必须出现在手册中，任一缺失即阻断 → 回 GAP_ANALYSIS 补齐<br>2. 核心优先模式（`work_mode="core_priority"`）：手册必须含「附录 F：未覆盖模块/功能清单」，且列出的每个模块都必须在 `batch.skipped_modules` 中有记录；**无附录 F 或清单与 skipped_modules 不一致 → 阻断**<br>3. 手册首页须注明覆盖范围声明（全量=全部模块 / 核心优先=声明哪些未覆盖）|
 
 ### 阻断性检查（任何一项不通过→整体不通过）
+> **v6.3 变更**：标 ⚙ 的检查项必须用 `run.py` 机器执行，AI 不得自评自述结果。
+
 | 检查项 | 检查方式 | 阻断条件 |
 |--------|---------|----------|
 | 隐私安全 | 扫描所有产物中的密码/密钥/IP | 发现任何明文密码/密钥 → 阻断 |
 | 流程图合规 | 验证Mermaid语法使用 | 有任何文字图替代Mermaid → 阻断 |
-| 流程图完整性 | 检查用户手册中每个模块是否包含≥1个Mermaid流程图 | 存在无Mermaid流程图的模块 → 阻断 |
-| 内容合规性 | 扫描用户手册中的API端点/HTTP代码示例 | 发现 `| POST/GET/PUT/DELETE`、````http` 或 `curl` → 阻断 |
+| **流程图完整性 ⚙** | **必须运行 `'{"project_path":"<项目>"}' \| python run.py scan_flowcharts`**，以脚本输出的 P0 命中数为准 | **scan_flowcharts 输出 FAIL（每模块 <1 张有效流程图 / 操作小节无图 / 全文 <3 张 / graph 旧语法 / 空图）→ 阻断，打回 WRITE 补图** |
+| **内容合规性 ⚙** | **必须运行 `'{"project_path":"<项目>","manual_path":"<手册>"}' \| python run.py scan_tech`**，以脚本输出的 P0 命中数为准 | **scan_tech 发现任何 P0 级技术泄漏（API端点/HTTP代码/数据库名/框架名/参数名/代码块）→ 阻断，打回 REFINE 重写** |
+| **覆盖完整性⑪ ⚙** | **必须运行 `'{"project_path":"<项目>"}' \| python run.py coverage`**，以脚本输出为准 | **coverage 输出任何未覆盖模块 → 阻断**（全量模式有模块缺失 / 核心优先模式无附录F → 阻断） |
+| **产物真实性 ⚙** | **必须运行 `'{"project_path":"<项目>"}' \| python run.py verify`** | **verify 输出 FAIL → 阻断，按 FAIL 清单回退补齐** |
 | TODO占位内容 | 检查是否有未解决的TODO:PLACEHOLDER标记 | 发现未解决的PLACEHOLDER → 阻断（TODO_RESOLVE阶段处理后仍存在的才阻断） |
 | 状态图合规 | 检查stateDiagram-v2格式 | 状态图非Mermaid格式 → 阻断 |
 | 模板块数验证 | 验证声称数vs实际列数 | 声称N个但列出M个(M<N) → 阻断 |
 | 合并完整性 | 检查整合产物是否外部文件引用 | 包含"详见 X.md""参见 _modules/"类引用 → 阻断 |
-| 覆盖完整性⑪ | 对照 L1_index 全部模块 vs 手册章节 + 附录F | 全量模式有模块缺失 / 核心优先模式无附录F → 阻断 |
 | 文件命名 | 检查最终文件是否按项目命名 | 不是 `{项目名} 用户操作手册.md` 格式 → 阻断 |
 | 文件位置 | 检查最终文件是否在项目根目录 | 在 `.agent/harness/` 内 → 阻断 |
 
-**执行方式**：这些检查项由AUDIT阶段强制执行，**不能自动跳过**。
+**执行方式**：这些检查项由AUDIT阶段强制执行，**不能自动跳过**。⚙ 项必须先运行 `run.py` 拿到机器结果再判定，禁止 AI 用"我已检查过"替代脚本输出（v6.3 防借口条款）。
 
 ### 检查点（v6.2 统一 10 维 ≥60 + 覆盖完整性⑪硬条件，与 phase-protocol §15 对齐）
 - 综合评分 = Σ(各维度分 × 权重)，≥60 分通过（否则返回 WRITE 修复）
@@ -99,7 +102,7 @@
 
 ## §TODO（阶段 16 · 逐条解决，v6 新增 §TODO 节）
 
-> chunk-index.yaml 加载矩阵 ID=42 明确此阶段加载 Chunk05 §TODO；
+> chunk-index.yaml 加载矩阵 05 行明确此阶段加载 Chunk05 §TODO；
 > 本阶段对应 protocols/todo-protocol.md v6 规范，与 `_todo_list.md`（路径见 baton.artifacts.todo_list）/ auto_review_stage.still_requires_attention_ids（附录C高风险推断项）联动。
 
 **职责**：
@@ -197,7 +200,7 @@ else:
  → 找 TOP_M 个最低分模块（M ≤ max(3, 0.1*N)）
  → 每个不合格模块且 retry_count[module] ≤ 2:
  → 只重做该模块：baton.rework.write_rerun_modules.append(module_id)
- → baton.meta.state = WRITE & baton.meta.sub_state="RERUN_MODULES"（按 chunk-04 §5.3 只重写该模块）
+ → baton.meta.state = WRITE & baton.meta.sub_state="RERUN_MODULES"（按 chunk-09 §三 只重写该模块）
  → 不合格模块且 retry_count[module] ≥ 3:
  → 不再重写，最终文档该模块末尾加 ：「该模块盲审第3次仍不合格，质量参考评分 X/100，请用户人工复核」
  → 附录 C Top 清单新增该模块整体条目

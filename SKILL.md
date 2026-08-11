@@ -1,10 +1,10 @@
 ---
 name: ManualGen
-version: 6.2.0
+version: 6.3.0
 description: 智能业务分析与操作手册生成专家 v6 — 六层递进式骨架生长架构 + 知识图谱编织 + 增量回灌。从界面到模块到区域到功能到按钮到字段，逐层沉淀节点与证据，最终编织成网，输出真正详细的用户操作手册。核心能力：L0骨架→L1模块→L2区域→L3功能→L4操作→L5细节→图谱构建→Snake跨模块链→单版手册。适用：大项目增量生成/追求细致不是概括/需要端到端跨模块流程。不适用：单次简单问答/纯编码任务/只看摘要不看细节。
 ---
 
-# ManualGen v6.2 — 六层骨架生长 + 知识图谱编织引擎（全量覆盖铁律）
+# ManualGen v6.3 — 六层骨架生长 + 知识图谱编织引擎（全量覆盖铁律 + CLI 硬校验）
 
 > **核心变革**：v5 是"先一口气读完全部代码 → 再统一写文档"（大项目上下文爆炸、信息提取粗糙、流程多纰漏、差不多就行）；
 > v6 是"像树木生长一样逐层沉淀"，每一层完成立即落盘，上层只读下层的结构化产物，不回头重读原始代码。
@@ -25,6 +25,75 @@ description: 智能业务分析与操作手册生成专家 v6 — 六层递进�
 | **How it works** | L0骨架 → L1模块 → L2区域 → L3功能 → L4操作 → L5细节 → 图谱构建(含Snake跨模块链) → GAP缺口 → AUTO_REVIEW(AI自审，无用户打断) → 冲突解决 → 写模块 → 回扫 → 一致性检查 → 合并 → 审核 → 判定 |
 | **What it produces** | 面向运营/销售/客户的用户版操作手册（单版完整文档），**每段文字可追溯到代码证据**，**含端到端跨模块操作指南**，**含角色×功能的权限矩阵** |
 | **最大变化 vs v5** | 六层增量提取（不是一次性全读）、知识图谱+证据溯源（不是扁平md）、Snake跨模块链（不是单模块孤立）、JSON结构化接力棒（不是Markdown表格） |
+
+---
+
+## CLI 硬校验层（v6.3 新增 · 最高优先级 · 先读这里）
+
+> **为什么有这一章**：v6.2 的约束全是「AI 自我约束」（软约束），实测执行 AI 伪造接力棒
+> （baton 谎报 L2/L3/L4 共 38 批 done，产物目录根本不存在）、跳层不落盘、把 API 端点和
+> 参数名写进用户手册（E:\test_agent 案例：手册仅 435 行 + 93 处技术泄漏）。
+> **根因**：让 AI 自述"我做完了"是不可靠的。v6.3 起，所有**可客观判定的事**由脚本判定，
+> AI 只做智力活（分析、写作、裁决），二者严格分工。
+
+### 1. CLI 工具层强制（对齐 conspect_tools / medic_tools 模式）
+
+```markdown
+所有产物存在性/计数/技术泄漏/覆盖完整性检查，统一通过 {Skill 目录}/manualgen_tools/run.py 执行。
+AI 禁止：用 `python -c` 内联命令代替、禁止绕过 CLI 自行"目测"产物、禁止自述校验结果。
+
+调用方式（Windows PowerShell 用管道，避免引号问题）：
+  '{"project_path": "E:/xxx"}' | python run.py verify
+  '{"project_path": "E:/xxx", "manual_path": "E:/xxx/xx 用户操作手册.md"}' | python run.py scan_tech
+  '{"project_path": "E:/xxx"}' | python run.py scan_flowcharts
+  '{"project_path": "E:/xxx"}' | python run.py check_deliverables
+  '{"project_path": "E:/xxx"}' | python run.py coverage
+  '{"project_path": "E:/xxx"}' | python run.py baton_fix
+  '{"project_path": "E:/xxx", "purge_kb": true}' | python run.py reset
+  '{"project_path": "E:/xxx"}' | python run.py ping
+工作目录：cd {Skill 目录}/manualgen_tools
+退出码：0=PASS 可推进；1=FAIL 禁止推进（AI 不得忽略退出码强行继续）。
+调用方式补充：参数优先用命令行 JSON（'...' | 管道）；含中文/特殊字符路径建议写 JSON 文件再 --params-file 传入。
+```
+
+### 2. 强约束 / 软约束分层（唯一合法的判定权划分）
+
+| 层 | 判定权 | 执行者 | 内容 |
+|----|--------|--------|------|
+| **工程骨架层（强约束）** | 机器 | `run.py` | 文件存在性、批次计数、产物清单、覆盖完整性、技术泄漏、接力棒计数反推 |
+| **智能分析层（软约束）** | AI | 主控/子Agent | 模块划分、功能识别、操作步骤、置信度裁决、冲突解决、写作质量 |
+
+**铁律**：AI 不得把"强约束项"拿来自我判定。例如——
+- "这层我跑完了吗？" → 唯一答案来源 = `run.py verify` 的 PASS，不是 AI 的自我感觉
+- "手册有没有技术泄漏？" → 唯一答案来源 = `run.py scan_tech` 的 P0 命中数，不是 AI 自扫
+- "各层完成计数是多少？" → 唯一答案来源 = `run.py baton_fix` 从磁盘产物数反推写入（节点计数），AI 禁止手填数字；批次进度由 `run.py verify` 校验
+
+### 3. 产物缺失阻断（清单制，非口头承诺）
+
+进入下一阶段前，必须用 `run.py check_deliverables` 检查。**产物缺失 = 该阶段未完成 = 阻断推进**。
+v6 完整产物清单（35+ 文件）见 [baton-protocol §四]，核心硬性项：
+- 每层完成 → `_kb/Lx_xxx/*.json` 必须有实际文件（空目录不算）
+- GRAPH_BUILD → `_kb/graph/` 6 文件全在（_nodes/_triples/_evidence/_snakes/_layer_index/_quality）
+- WRITE → `output_user_manual/_modules/*.md` 必须存在（≥1 篇/模块）
+- INTEGRATE → `_appendix/B~F` 5 个附录 + 项目根目录最终手册
+- 阶段报告 → `_gap_analysis.md` `_refine_log.md` `_audit.md` `_judgment.md` 等
+
+### 4. 违规后果（违反即 Skill 判定无效）
+
+- [P0 阻断] `run.py verify` 返回 FAIL 却强行推进 → 本次生成结果作废，回退到 GAP_ANALYSIS
+- [P0 阻断] 手册通过 `run.py scan_tech` 发现 P0 级技术泄漏 → GW/AUDIT 不通过，打回 REFINE 重写
+- [P0 阻断] 接力棒计数被 AI 手改（与 `baton_fix` 反推不一致）→ 按「接力棒伪造」处理，回退该层重做
+- [P0 阻断] `output_user_manual/_modules/` 不存在但声称 WRITE done → 判 WRITE 未执行，补跑
+- 如果用户发现 AI 绕过以上任何一条 → 可判定本 Skill 执行无效，要求回退重跑
+
+### 5. 防借口条款（以下理由不构成绕过 CLI 硬校验的合法依据）
+
+- "这次是增量续跑，产物不完整也正常" → 增量续跑也要 verify 现有产物
+- "上下文太长，先跳过脚本校验" → 上下文紧张用断点续跑/批次落盘解决，不得跳过校验
+- "这是审查 Skill 本身/不是正式生成" → 任何执行 run.py 的场景都适用
+- "项目太小，不需要完整校验" → 越小的项目越要保证产物真实
+- "我用子 Agent 检查过了" → 子 Agent 自检不是 run.py 机器校验，二者不能互相替代
+- "verify 失败了但我判断可以继续" → 退出码 1 即禁止推进，AI 无权豁免
 
 ---
 
@@ -61,6 +130,9 @@ Step 7: 重复 Step 5-6，直到 AUTO_REVIEW 或 DONE
 - [ ] 已确认接力棒存在与否
  - 存在 → 解析 meta.state + meta.current_layer + layers.*.current_batch，准备续跑
  - 不存在 → 创建 .agent/harness/ 和 _kb/ 目录，接力棒初始化为 START 状态 JSON
+- [ ] **已运行 CLI 校验**（v6.3 强制）：
+ - `'{"project_path": "<项目路径>"}' | python run.py verify`
+ - verify 输出 **PASS** 才可续跑；输出 **FAIL** 必须按 FAIL 清单回退补齐（产物缺失→补产物；计数造假→baton_fix 反推），不得带着 FAIL 推进
 - [ ] 已在回复第一行输出：
  "当前状态：[阶段名]（第N层），批次：[{当前批内容}]，下一步：[操作]"
  例："当前状态：L3_FUNCTION（第3层），批次：[客户管理_客户列表_搜索区, 客户管理_客户列表_操作栏]，下一步：识别这些区域内的功能点"
@@ -106,7 +178,8 @@ E:\salesclaw-main 我新增了「suggestions 智能建议模块」，帮我把�
 ## 自检闭环（每次回复结束时必须检查）
 
 - [ ] 本次回复是否输出了规定的"当前状态...批次...下一步"开头？
-- [ ] 如果当前批已完成 → 是否已写文件到 `_kb/Lx_xxx/*.json`？是否已更新 baton.layers.*？
+- [ ] 如果当前批已完成 → 是否已写文件到 `_kb/Lx_xxx/*.json`？**是否已运行 `run.py verify` 且输出 PASS？**
+- [ ] 计数是否来自磁盘反推？（`run.py baton_fix` 写入，禁止手填 batches_done / nodes_total）
 - [ ] 是否严格按六层顺序推进？（禁止跳层：未完成L0禁止进L1）
 - [ ] 是否严格按批读取代码？（禁止一次读10个文件：每批只读本批范围对应的源码）
 - [ ] 如果没有 → 已偏离状态机 → 立即返回修正
@@ -301,16 +374,20 @@ START
 ## 七层闸门体系（Gate System）
 
 > 参考skill-medic的闸门思想。每层完成后必须通过闸门才准进入下一层。
+> **v6.3 变更**：每道闸门的**产物真实性判定**一律由 `run.py verify` 机器执行（强约束），
+> AI 只负责判定内容质量（软约束）。闸门检查项分两类：
+> - **机器判定（run.py verify）**：该层产物文件存在性、批次计数与磁盘一致 → FAIL 即阻断，AI 无权豁免
+> - **AI 判定**：内容质量、覆盖率、置信度 → 按下表阈值
 
-| 闸门 | 位置 | 检查内容 | 通过阈值 | 不通过处理 |
-|------|------|---------|---------|-----------|
-| G0 | L0→L1 | 模块数非空+依赖图非孤立+角色≥2+数据创建链≥3 | L0.quality≥80 | 补充探索，不能进L1 |
-| G1 | L1→L2 | **全部模块**L1完成+每页都有入口+实体≥1 | L1.quality≥75 | 缺哪个模块补哪个，不重跑整层 |
-| G2 | L2→L3 | **全部页面**区域划分完整+≥1区域间触发关系 | L2.quality≥70 | 缺哪页补哪页 |
-| G3 | L3→L4 | **全部区域 100% 覆盖**（批循环，`batches_done==batches_total`）+ 已识别 FUNCTION ≥90% 带 trigger_element 入口 | L3.quality≥65 | 缺哪区域补哪区域 |
-| G4 | L4→L5 | **全部功能**每功能≥5步+≥1分支流程图 | L4.quality≥65 | 缺哪功能补哪功能 |
-| G5 | L5→GRAPH | 字段覆盖率≥80%+权限矩阵≥70%+错误消息≥50条 | L5.quality≥60 | 缺哪些字段补哪些字段 |
-| GW | WRITE→REFINE | 子Agent写出的模块文件不出现API端点/数据库名等技术泄露 | 每模块REFINE清单≥8/10 | 不合格模块立即重写（不影响其他已合格模块） |
+| 闸门 | 位置 | 机器判定（run.py） | AI 判定内容 | 不通过处理 |
+|------|------|--------------------------|------------|-----------|
+| G0 | L0→L1 | `_kb/L0_skeleton.json`+`_report.md` 存在 | 模块数非空+依赖图非孤立+角色≥2+数据创建链≥3 | 补充探索，不能进L1 |
+| G1 | L1→L2 | `_kb/L1_modules/*.json` 文件数 ≥ 声称模块数 | **全部模块**L1完成+每页都有入口+实体≥1 | 缺哪个模块补哪个，不重跑整层 |
+| G2 | L2→L3 | `_kb/L2_regions/*.json` 非空 | **全部页面**区域划分完整+≥1区域间触发关系 | 缺哪页补哪页 |
+| G3 | L3→L4 | `_kb/L3_functions/*.json` 非空且 ≥ 声称功能数 | **全部区域 100% 覆盖**+FUNCTION ≥90% 带 trigger_element | 缺哪区域补哪区域 |
+| G4 | L4→L5 | `_kb/L4_operations/*.json` 非空且 ≥ 声称操作数 | **全部功能**每功能≥5步+≥1分支流程图 | 缺哪功能补哪功能 |
+| G5 | L5→GRAPH | `_kb/L5_details/**` 五类子目录均有产物文件 | 字段覆盖率≥80%+权限矩阵≥70%+错误消息≥50条 | 缺哪些字段补哪些字段 |
+| GW | WRITE→REFINE | `run.py scan_tech` 对 `output_user_manual/_modules/*.md` + 最终手册扫描，**P0 命中数必须为 0** | 每模块REFINE清单≥8/10 | P0 命中即打回重写；不合格模块立即重写（不影响其他已合格模块） |
 
 ---
 
@@ -344,10 +421,10 @@ START
 > **背景**：v6.1 曾默认"核心优先"，导致执行 AI 自行降级只做核心模块就交付，用户拿到浅层手册（如 10 模块项目只写了 6 页 → 手册仅 266 行）。v6.2 起强制以下规则：
 
 1. **默认全量**：除非用户消息中**显式点名模块范围**（如"只写客户管理模块"），否则 L0→L5 必须覆盖项目 100% 的模块/页面/区域/功能；字段覆盖以 100% 为目标、≥80% 为推进闸门，权限矩阵以 100% 为目标、≥70% 为推进闸门（见下），**未覆盖部分必须显式披露**（附录 F 未覆盖清单或附录 C Top 未决项），禁止静默缺失。每个 L 层按批循环，直到 `batches_done == batches_total` 才允许进入下一层。
-2. **批次数推导即写死**：进入某 L 层时，先由父层节点数推导 `*_batches_total`（如 L2_total = ceil(页面总数/每批3页)）写入 baton，**全程只增不减**；`batches_done < batches_total` 时禁止推进到下一阶段。
+2. **批次数推导即写死 + 计数机器反推**：进入某 L 层时，先由父层节点数推导 `*_batches_total`（如 L2_total = ceil(页面总数/每批3页)）写入 baton，**全程只增不减**；`batches_done` 一律由 `run.py baton_fix` 从磁盘产物反推写入，**AI 禁止手填计数**（v6.3）；`batches_done < batches_total` 时禁止推进到下一阶段。
 3. **禁止自行降级**：AI 不得因"上下文太长/项目太大/耗时预估"自行切换核心优先或提前收口。上下文紧张 → 用断点续跑/批次落盘解决，不得缩范围。
 4. **核心优先 = 显式 opt-in + 强制披露**：仅用户点名模块范围时启用；此时必须 (a) 在 baton 记 `work_mode="core_priority"` + `skipped_modules=[...]`；(b) 其余模块仍全量扫到 L2 作背景；(c) INTEGRATE 强制生成**附录 F：未覆盖模块/功能清单**；(d) 手册首页注明"本手册仅覆盖 X 模块，未覆盖 Y、Z"。
-5. **覆盖完整性检查**：AUDIT 阶段新增第 11 检查项——把 L1_index 全部模块与手册章节逐一比对，未覆盖模块必须能溯源到附录 F，否则 AUDIT 不得通过，回退到 GAP_ANALYSIS 补齐。
+5. **覆盖完整性检查（机器执行）**：AUDIT 阶段第 11 检查项——用 `run.py coverage` 把 L1 全部模块与手册章节逐一比对，未覆盖模块必须能溯源到附录 F，否则 AUDIT 不得通过，回退到 GAP_ANALYSIS 补齐。AI 不得自述"已覆盖全部模块"代替 coverage 结果。
 
 ### 1. 计数-列表-证据 三连验证（比v5加了证据链）
 ```
@@ -503,7 +580,7 @@ MODULE < 3 且 PAGE < 10 的超小型后台，会自动走 v5 EXPLORE/EXTRACT �
 ---
 
 ### 与深度 FAQ 互补关系
-主文档 FAQ（本节 11 题）= 新手入门 + 使用说明；进阶问题（接力棒损坏/图谱写一半崩/证据链缺失/多次激活冲突 等 15 题）见 `references/faq-deep.md`。
+主文档 FAQ（本节 11 题）= 新手入门 + 使用说明；进阶问题（接力棒损坏/图谱写一半崩/证据链缺失/多次激活冲突 等 10 题）见 `references/faq-deep.md`。
 
 ---
 
@@ -511,19 +588,20 @@ MODULE < 3 且 PAGE < 10 的超小型后台，会自动走 v5 EXPLORE/EXTRACT �
 
 | 文件 | 何时加载 | 内容 |
 |------|---------|------|
+| `manualgen_tools/run.py` | **全程（v6.3 强制）** | CLI 硬校验层：verify/scan_tech/scan_flowcharts/check_deliverables/coverage/baton_fix/reset/ping 八大 action，产物/计数/技术泄漏/流程图/覆盖的机器判定唯一来源 |
 | `knowledge-base/03-layered-architecture.md` | L0~L5每层开始时 | 六层每层的提取目标/内容/完成标准/分批规则 |
 | `knowledge-base/04-graph-schema-v6.md` | GRAPH_BUILD 开始时 | 节点/三元组/Snake/证据的完整JSON schema |
-| `protocols/baton-protocol.md` | 全程（主控每次读写baton前） | JSON接力棒字段含义 + 7条控制规则 |
+| `protocols/baton-protocol.md` | 全程（主控每次读写baton前） | JSON接力棒字段含义 + 7条控制规则 + v6.3计数反推 |
 | `protocols/graph-protocol.md` | GRAPH_BUILD 全程 | 7步图谱构建流水线 + 增量构建规则 |
 | `protocols/phase-protocol.md` | 每次阶段切换前 | 各阶段闸门/产物验证/异常处理细则 |
 | `SKILL.chunks/chunk-07-skeleton-growth.md` | L0~L5每层 | 每层执行细则 + Agent输入输出模板 |
 | `SKILL.chunks/chunk-08-knowledge-graph.md` | GRAPH_BUILD | 图谱构建7步的具体执行代码/查询模板 |
 | `SKILL.chunks/chunk-09-incremental-refine.md` | 回灌/打回重做时 | 增量回灌算法 + 局部重做规则 |
 | `templates/user-manual.md` | WRITE阶段前 | 模块文档写作模板（v6新增：Snake章节模板+权限矩阵模板） |
-| `references/anti-patterns.md` | 全程（自检时） | 10类经典错误 + v6新增"跳层/跳批/证据不足硬写"反模式 |
-| `references/faq-deep.md` | 遇到疑难时 | 15个深度问答（新增v6专属5题） |
+| `references/anti-patterns.md` | 全程（自检时） | 13类反模式（v6.3新增：伪造接力棒/自评放水/技术泄漏） |
+| `references/faq-deep.md` | 遇到疑难时 | 10个深度问答 |
 
 ---
 
-**版本**: 6.2.0
+**版本**: 6.3.0
 **最后更新**: 2026-08-11

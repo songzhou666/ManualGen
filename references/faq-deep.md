@@ -271,9 +271,9 @@ AI 会把用户给出的偏好写入 baton.custom_preferences 对象，在 WRITE
 ├── _kb/ # 知识底座（六层产物）
 │ ├── L0_skeleton.json # L0 骨架（模块/角色/依赖）
 │ ├── L1_modules/*.json # L1 模块（每批 2-3 模块）
-│ ├── L2_pages/*.json # L2 页面
-│ ├── L3_regions/*.json # L3 区域
-│ ├── L4_functions/*.json # L4 功能
+│ ├── L2_regions/*.json # L2 区域
+│ ├── L3_functions/*.json # L3 功能
+│ ├── L4_operations/*.json # L4 操作
 │ ├── L5_details/*.json # L5 细节（ENTITY/ROLE/ELEMENT/字段详情/权限矩阵/按钮状态）
 │ ├── graph/ # 知识图谱（6 个 JSON）
 │ │ ├── _nodes.json # 8类节点归一化

@@ -159,5 +159,5 @@ flowchart TD
 
 ---
 
-**版本**: 6.2.0-agent04-module-writer
+**版本**: 6.3.0-agent04-module-writer
 **最后更新**: 2026-08-11

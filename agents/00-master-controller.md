@@ -18,7 +18,7 @@ Step 0: 入口清单
  b. 读 existing baton（.agent/harness/_baton.json）
  c. 若 baton 不存在 → 初始化 START；meta.is_running=1（全流程托管，AI 自主，无 manual_mode 概念）
  d. 输出一行启动信息 + 状态（不输出大段解释）：
- 「ManualGen v6.2 已激活 | 项目: <project_root> | 当前阶段: START | 模式: 全流程托管（AI自主，无用户确认环节）」
+ 「ManualGen v6.3 已激活 | 项目: <project_root> | 当前阶段: START | 模式: 全流程托管（AI自主，无用户确认环节）」
  e. 立即 Step 1
 ```
 
@@ -32,7 +32,7 @@ b. 若 meta.state ∈ L0~L5：
 c. 若 baton.meta.sub_state=="BACKFILLING" → 从回灌断点继续
 d. 若 meta.state=AUTO_REVIEW 但 _auto_review_complete 标记存在 → 直接推进下一阶段（避免重复审）
 e. 若存在 baton.layers[Lx].status == "completed_with_pending" → 先走 GAP 强制回灌清单，不得直接 INTEGRATE
-f. 输出一行：「ManualGen v6.2 已从断点恢复 | 阶段: <meta.state> | 进度: <简要百分比>」
+f. 输出一行：「ManualGen v6.3 已从断点恢复 | 阶段: <meta.state> | 进度: <简要百分比>」
 ```
 
 ---
@@ -224,5 +224,5 @@ JUDGE 盲审返回 per_module_scores 后：
 
 ---
 
-**版本**: 6.2.0-agent00master
+**版本**: 6.3.0-agent00master
 **最后更新**: 2026-08-11

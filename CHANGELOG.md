@@ -1,4 +1,37 @@
-# ManualGen v6.2.0 版本更新说明
+# ManualGen v6.3.0 版本更新说明
+
+**版本**: 6.3.0
+**发布日期**: 2026-08-11
+**类型**: 架构加固（CLI 硬校验层，根治「AI 自审放水 + 计数伪造 + 技术泄漏」）
+**兼容**: v6.x
+
+---
+
+## 更新摘要
+
+v6.3 根治了「AI 自评自己的产物 → 自审放水 → 跳层不落盘 → 技术参数泄漏进用户手册」的机制缺陷。
+实测复现（E:\test_agent）：baton 谎报 L2/L3/L4 共 38 批 done 但产物目录根本不存在，最终手册仅 435 行且含 93 处 API 端点/参数名技术泄漏——而这些全通过了 v6.2 的 AUDIT 自审。**根因：让 AI 自述"我做完了"不可靠**。v6.3 起所有可客观判定的事交给脚本（对齐 conspect_tools / medic_tools 模式）：
+
+- **新增 `manualgen_tools/run.py` 硬校验工具层**（8 个 action）：
+  - `verify`：校验接力棒「声称已完成」的各层产物是否真实存在、计数是否与磁盘一致 → FAIL 即阻断，AI 无权豁免（status 兼容 completed/completed_with_pending/done）
+  - `scan_tech`：扫描手册/模块文档的技术泄漏（API端点/HTTP代码/数据库名/框架名/参数名/代码块），P0 命中即 GW/AUDIT 阻断；命中按模式分组展示便于定位
+  - `scan_flowcharts`：**流程图硬门（v6.3 审计加固）**——每模块 ≥1 张非空 Mermaid 流程图、每个操作小节 ≥1 张（不可共用）、手册全文 ≥3 张、graph 旧语法与空图均阻断
+  - `check_deliverables`：检查 v6 完整产物清单（六层/图谱6文件/阶段报告/_modules/附录 B~F 共 5 个）是否齐全，缺失即阻断
+  - `coverage`：L1 全部模块 vs 手册章节比对，输出未覆盖模块（AUDIT ⑪ 机器化）
+  - `baton_fix`：从磁盘实际产物反推各层计数并修正接力棒（**替代 AI 手填计数**；兼容 _nodes.json 的 dict 包装 schema）
+  - `reset`：备份并重置接力棒为 START（供全量重跑）
+  - `ping`：工具自检（Python 版本/项目目录可读/接力棒存在性），快速确认 CLI 可用
+- **CLI 健壮性（对齐 conspect_tools）**：参数解析三通道（--params-file > 命令行 JSON > stdin 管道，避免非交互环境 stdin 挂死）；所有异常输出结构化 JSON 错误（error_code E400/E500）+ 非零退出码；未知 action 结构化报错；Ctrl+C 优雅退出（退出码 130）
+- **强约束 / 软约束分层**：工程骨架层（文件存在性、计数、技术泄漏、覆盖）判定权归机器；AI 只保留智能分析层（模块划分、功能识别、写作、裁决）判定权
+- **接力棒计数禁止手填**：`*_batches_done` / `*_completed` / `graph.*_total` 必须由 `baton_fix` 磁盘反推写入
+- **七层闸门双轨制**：G0-G5/GW 的产物真实性由 `run.py verify` 机器判定，AI 只判内容质量
+- **AUDIT 阻断检查机器化**：内容合规性→`scan_tech`、覆盖完整性⑪→`coverage`、产物真实性→`verify`，标 ⚙ 项禁止 AI 自评代替
+- **INTEGRATE 强制由 `_modules/` 合并**：`_modules` 不存在即阻断，禁止主控另起炉灶直接写最终手册
+- **违规后果 + 防借口条款**：verify FAIL 强推、计数手改、跳过 scan_tech 等均判 Skill 执行无效；明列"上下文太长/项目太小/子Agent检查过"等 6 条经典借口不构成绕过依据
+
+---
+
+## v6.2.0 历史更新说明（前版）
 
 **版本**: 6.2.0
 **发布日期**: 2026-08-11

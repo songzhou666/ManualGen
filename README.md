@@ -1,4 +1,4 @@
-# ManualGen v6.2.0 · 智能业务分析与操作手册生成专家
+# ManualGen v6.3.0 · 智能业务分析与操作手册生成专家
 ## 六层递进式骨架生长架构 + 知识图谱编织 + 增量回灌
 
 **定位**：不是"把代码翻译成文档"，而是像产品经理一样理解业务→像用户一样梳理流程→像运维一样沉淀细节，最终输出真正详细、可追溯到代码行的**用户操作手册**。
@@ -88,6 +88,8 @@ E:\my-erp 我新增了「智能建议 suggestions 模块」，帮我把这部分
 .trae/skills/ManualGen/
 ├── SKILL.md # 主入口（18阶段/FAQ/新手入门）
 ├── README.md # 本文件（产品介绍）
+├── manualgen_tools/ # ===== v6.3 硬校验工具层（CLI 机器判定，AI 不得绕过）=====
+│ └── run.py # verify/scan_tech/scan_flowcharts/check_deliverables/coverage/baton_fix/reset/ping 八大 action
 ├── SKILL.chunks/ # ===== 按阶段分节 01~09 =====
 │ ├── chunk-index.yaml # 加载矩阵 + 路由表
 │ ├── chunk-01-overview.md # 强制入口清单 + 18阶段状态机
@@ -149,7 +151,7 @@ E:\my-erp 我新增了「智能建议 suggestions 模块」，帮我把这部分
 ├── quality-control/ # ===== 质量标准 =====
 │ └── 00-quality-system.md # 质量体系（AUDIT 对齐）
 ├── privacy/privacy-notice.md # 隐私承诺
-├── 1-manifest/skill-manifest.yaml # Skill 元数据（version 6.2.0）
+├── 1-manifest/skill-manifest.yaml # Skill 元数据（version 6.3.0）
 └── CHANGELOG.md # 版本变更日志
 ```
 
@@ -159,6 +161,7 @@ E:\my-erp 我新增了「智能建议 suggestions 模块」，帮我把这部分
 
 | 版本 | 日期 | 核心变化 |
 |------|------|---------|
+| v6.3.0 | 2026-08-11 | CLI 硬校验层：manualgen_tools/run.py 接管产物/计数/技术泄漏/流程图/覆盖校验（verify/scan_tech/scan_flowcharts/check_deliverables/coverage/baton_fix/reset/ping 八大 action），闸门改机器判定+AI判定双轨，接力棒计数禁止手填，AUDIT 阻断项（内容合规/覆盖/产物/流程图）全部脚本化 |
 | v6.2.0 | 2026-08-11 | 全流程自主托管：AUTO_REVIEW 取代 CONFIRM、JUDGE 模块级打回、AUDIT 10维 + ⑪覆盖完整性硬门、产物路径统一、附录 B~F 模板（F=未覆盖清单）、Refiner/Judge Agent 补齐 |
 | v6.0.0 | 2026-08-10 | 六层增量 + 知识图谱 + Snake + 增量回灌，13→18 阶段 |
 
