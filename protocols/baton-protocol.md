@@ -275,10 +275,27 @@
 
 ### 1. 单点写规则
 只有 00-master-controller 写接力棒。
+
+**`.agent/harness/` 目录协作约定（多 Skill 共存）**：
+| 文件/目录 | 归属 | 其他 Skill 不得 |
+|---|---|---|
+| `_baton.json`、`_kb/` | ManualGen | 读写 |
+| `_gap_analysis.md` `_resolution.md` `_refine_log.md` `_reference_check.md` `_integration.md` `_audit.md` `_todo_resolution.md` `_judgment.md` | ManualGen | 覆盖 |
+| `_cs-baton.md` | conspect | 读写 |
+| `_baton.md` | ReqPlan-v3 | 读写 |
+
+ManualGen 只写上表归属自己的文件；与 conspect / ReqPlan-v3 在同一项目并行运行时，
+禁止互相读取对方的接力棒。若同一目录已有其他 Skill 的中间产物，不得清理。
+
+- **禁止并发**：同一项目同一时间只允许一个 ManualGen 实例运行。`_baton.json` 与 `_kb/` 没有跨进程锁，
+  两个实例会互相覆盖。激活时若 `meta.is_running == 1` 且 `updated_at` 在 30 分钟内，
+  先视为「另一实例可能仍在跑」，确认后再决定续跑或 `reset`。
+
 - 所有子Agent（Skeleton/NodeWeaver/GraphBuilder/EntityAligner/模块Writer）**只读不写**
 - 子Agent完成后把结果回报给主控，主控写入 `layers.*` / `graph.*` / `batch.*`
 - 任何子Agent直接改 `_baton.json` → 判定违规，该子Agent产出全部作废重来
-- **v6.3：主控写入的计数（`*_batches_done` / `*_completed` / `graph.nodes_total` / `triples_total` / `evidence_total` / `snakes_total`）必须来自 `run.py baton_fix` 的磁盘反推结果**，不得凭记忆手填。先落盘产物 → 运行 baton_fix → 用其输出写接力棒。
+- **v6.3.1：主控写入的节点计数（`*_completed` / `graph.nodes_total` / `triples_total` / `evidence_total` / `snakes_total`）必须来自 `run.py baton_fix` 的磁盘反推结果**，不得凭记忆手填。先落盘产物 → 运行 baton_fix → 用其输出写接力棒。
+- **`*_total` / `*_total_expected` / `*_batches_total` 是计划量，只读**：由父层节点数推导后写入，`baton_fix` 不会改写，AI 也不得手改。`*_batches_done` 由主控按批推进写入，是否正确由 `run.py verify` 判定（done 必须等于 total）。
 
 ### 2. 阶段闸门（Gates）
 进入下一阶段/下一层前必须验证：
@@ -300,7 +317,7 @@
 - 把当前批所有节点**立即落盘**到对应 `Lx_xxx/*.json` 文件
 - **运行 `run.py baton_fix` 从磁盘反推** `graph.nodes_total` / `triples_total` / `evidence_total` 与 `layers.Lx.*_completed` 计数（v6.3，禁止手填）
 - 在 `layers.Lx.current_batch` 写入下一个待处理批次
-- `layers.Lx.*_batches_done` 按批次推进后，**必须运行 `run.py verify` 校验计数与磁盘一致**（batch 进度无法从磁盘反推，由 verify 兜底）
+- `layers.Lx.*_batches_done` 按批次推进后，**必须运行 `run.py verify`**：它逐层校验 `*_batches_total` 是否存在且 `done == total`，并核对 `*_completed` 与磁盘文件数——任一项不符即 P0 阻断。
 
 ### 4. 断点续跑
 会话中断后再次激活时：
@@ -386,7 +403,7 @@ JUDGE 通过后：
 | L1 | `L1_index.json` + `L1_modules/*.json` | 每个模块 1 个 json，文件数 = 模块数 |
 | L2 | `L2_regions/*.json` | 每页 1 个 json，非空 |
 | L3 | `L3_functions/*.json` | 每区域 1 个 json，功能点带 trigger_element 证据 |
-| L4 | `L4_operations/*.json` | 每功能 1 个 json，≥5 步 + 流程图 |
+| L4 | `L4_operations/*.json` | 每功能 1 个 json；core≥5 步 / micro≥2 步（atomic 需理由），core 含流程图 |
 | L5 | `L5_details/ENTITY|ROLE|ELEMENT|VALIDATION|AGGREGATE/*.json` | 五类子目录均非空 |
 
 ### 4.2 图谱产物（`_kb/graph/`，6 文件全在）

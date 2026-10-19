@@ -1,4 +1,4 @@
-# ManualGen v6.3.0 · 智能业务分析与操作手册生成专家
+# ManualGen v6.3.3 · 智能业务分析与操作手册生成专家
 ## 六层递进式骨架生长架构 + 知识图谱编织 + 增量回灌
 
 **定位**：不是"把代码翻译成文档"，而是像产品经理一样理解业务→像用户一样梳理流程→像运维一样沉淀细节，最终输出真正详细、可追溯到代码行的**用户操作手册**。
@@ -12,7 +12,7 @@
 | **六层递进提取** | L0骨架 → L1模块 → L2区域 → L3功能 → L4操作 → L5细节，逐层生长，不跳层 |
 | **知识图谱驱动** | 8 种节点（MODULE/PAGE/REGION/FUNCTION/ENTITY/ROLE/ELEMENT/STEP）+ 20+ 关系谓词，构建业务语义网 |
 | **Snake 跨模块链** | 独立章节+Mermaid流程图输出端到端业务流，不用跨 4 个模块翻手册 |
-| **证据溯源 & 置信度** | 每段文字≥3条源码证据（路径+行号+代码片段），低置信节点自动标警告，不虚假输出 |
+| **证据溯源 & 置信度** | 每个功能节点至少 1 条可定位源码证据（路径+起止行号），同源多节点自动合并为交叉验证；低置信节点自动标警告，不虚假输出 |
 | **增量回灌** | 新模块/代码变更只做局部补正，不从头重跑整个项目 |
 | **断点续跑** | 每批写完立即落盘+更新JSON接力棒，关掉对话下次接着跑 |
 | **全流程托管** | 18 阶段状态机全自主推进 + AI 自审无用户打断，零配置也能出文档 |
@@ -27,7 +27,7 @@
 | 阶段数 | 18 阶段（含 AUTO_REVIEW 自审） | 13 阶段（含 CONFIRM 需用户确认） |
 | Agent 数量 | 11 个专职 Agent 分工协作 | 7 个 Agent |
 | 跨模块流程 | Snake 概念链独立章节 + 端到端 Mermaid | 各模块独立无联系 |
-| 证据机制 | 每节点≥3条证据 + 反向索引可定位到源码行 | 只输出文本，不保存证据 |
+| 证据机制 | 每个功能节点≥1条证据 + 反向索引可定位到源码行；同源自动合并为交叉验证 | 只输出文本，不保存证据 |
 | 低置信处理 | AI 自主裁决 + 警告语（不写虚假操作） | 要求用户一个个确认 |
 | 上下文优化 | 按阶段+批+section 按需加载 chunks | 一次读所有 chunk |
 | 断点粒度 | 每批原子写，随时停随时续 | 每阶段写，停在中间会丢 |
@@ -86,10 +86,12 @@ E:\my-erp 我新增了「智能建议 suggestions 模块」，帮我把这部分
 
 ```
 .trae/skills/ManualGen/
-├── SKILL.md # 主入口（18阶段/FAQ/新手入门）
+├── SKILL.md # 主入口（18阶段/机器校验/FAQ 索引）
 ├── README.md # 本文件（产品介绍）
 ├── manualgen_tools/ # ===== v6.3 硬校验工具层（CLI 机器判定，AI 不得绕过）=====
-│ └── run.py # verify/scan_tech/scan_flowcharts/check_deliverables/coverage/baton_fix/reset/ping 八大 action
+│ └── run.py # verify/scan_tech/scan_flowcharts/check_deliverables/coverage/check_evidence/normalize_evidence/check_depth/check_reports/baton_fix/reset/ping 十二大 action
+├── tests/ # ===== 回归测试（23 用例，锁住批次/计数/覆盖/深度/证据链/空壳报告六类行为）=====
+│ └── test_run.py # python -m unittest discover -s tests -v
 ├── SKILL.chunks/ # ===== 按阶段分节 01~09 =====
 │ ├── chunk-index.yaml # 加载矩阵 + 路由表
 │ ├── chunk-01-overview.md # 强制入口清单 + 18阶段状态机
@@ -140,18 +142,19 @@ E:\my-erp 我新增了「智能建议 suggestions 模块」，帮我把这部分
 │ ├── appendix-B-permission-matrix.md # 附录B权限矩阵模板
 │ ├── appendix-C-AI-auto-decisions.md # 附录C AI决策记录模板
 │ ├── appendix-D-snake-flows.md # 附录D Snake全景模板
-│ └── appendix-E-evidence-index.md # 附录E证据索引模板
+│ ├── appendix-E-evidence-index.md # 附录E证据索引模板
+│ └── appendix-F-uncalled-modules.md # 附录F 未覆盖模块/功能清单模板
 │
 ├── references/ # ===== 参考文档 =====
 │ ├── anti-patterns.md # 反模式说明（含 v6 新增反模式）
-│ └── faq-deep.md # 进阶 FAQ（深度问题）
+│ └── faq-deep.md # FAQ 21 题（11 新手 + 10 深度）
 │
 ├── artifacts/ # ===== v5 产物模板（legacy）=====
 │ └── template-artifacts.md # 产物总览表（v5阶段）
 ├── quality-control/ # ===== 质量标准 =====
 │ └── 00-quality-system.md # 质量体系（AUDIT 对齐）
 ├── privacy/privacy-notice.md # 隐私承诺
-├── 1-manifest/skill-manifest.yaml # Skill 元数据（version 6.3.0）
+├── 1-manifest/skill-manifest.yaml # Skill 元数据（version 6.3.3）
 └── CHANGELOG.md # 版本变更日志
 ```
 
@@ -161,6 +164,9 @@ E:\my-erp 我新增了「智能建议 suggestions 模块」，帮我把这部分
 
 | 版本 | 日期 | 核心变化 |
 |------|------|---------|
+| v6.3.3 | 2026-10-19 | 异常路径加固：新增 `check_reports`（拦截空壳 AUDIT/JUDGE/REFINE/GAP 报告）、verify 校验图谱 JSON 合法性（写一半崩溃）、scan_tech 支持 `allow_terms` 业务白名单与附录 E 标题别名、ping 校验 Python≥3.8；补并发运行禁令；回归测试扩到 23 条（含异常演练） |
+| v6.3.2 | 2026-10-19 | 证据链闭环：新增 `check_evidence`（L1~L3 出口校验路径/行号/FUNCTION 证据）与 `normalize_evidence`（把 `path:line` 确定性归一化为图谱证据 + 节点索引，禁止 AI 手写）；L4 引用改为节点 ID，atomic 豁免规则；check_depth 支持预图谱/图谱后双模式；chunk-09 增机器校验失败返工映射；AUDIT 增证据抽样复核。回归测试扩到 21 条 |
+| v6.3.1 | 2026-10-19 | 闸门接线：verify 增批次一致性（total 存在 + done==total）、baton_fix 只写 completed 且 total 只读、coverage 收紧为整词匹配、新增 check_depth（步数/流程图/EVD 引用/证据可解析与行号），主控与 chunk-07 接入机器校验，补 11 条回归测试 |
 | v6.3.0 | 2026-08-11 | CLI 硬校验层：manualgen_tools/run.py 接管产物/计数/技术泄漏/流程图/覆盖校验（verify/scan_tech/scan_flowcharts/check_deliverables/coverage/baton_fix/reset/ping 八大 action），闸门改机器判定+AI判定双轨，接力棒计数禁止手填，AUDIT 阻断项（内容合规/覆盖/产物/流程图）全部脚本化 |
 | v6.2.0 | 2026-08-11 | 全流程自主托管：AUTO_REVIEW 取代 CONFIRM、JUDGE 模块级打回、AUDIT 10维 + ⑪覆盖完整性硬门、产物路径统一、附录 B~F 模板（F=未覆盖清单）、Refiner/Judge Agent 补齐 |
 | v6.0.0 | 2026-08-10 | 六层增量 + 知识图谱 + Snake + 增量回灌，13→18 阶段 |

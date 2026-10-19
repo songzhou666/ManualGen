@@ -2,8 +2,9 @@
 
 > **调度阶段**：GRAPH_BUILD（Master 调度 Skeleton 跑完 L5 后调用一次，增量模式可被回灌调度触发多次）
 > **输入**：`_kb/L0_skeleton.json` + `_kb/L1_modules/*.json` + `_kb/L2_regions/*.json` + `_kb/L3_functions/*.json` + `_kb/L4_operations/*.json` + `_kb/L5_details/*.json`
-> **输出**：`graph/_nodes.json` / `_triples.json` / `_evidence.json` / `_snakes.json` / `_layer_index.json` / `_quality.json`（共 6 个，含质量评估汇总）
-> **全自主**：7 步全跑完自动推进，除非 Step4 证据聚合后 total_evidence < 10（真的没任何来源，说明项目太小/读失败）→ 记录+不阻塞。
+> **输出**：`graph/_nodes.json` / `_triples.json` / `_snakes.json` / `_layer_index.json` / `_quality.json`（本 Agent 写）
+> + `graph/_evidence.json` / `_node_evidence.json`（由 `run.py normalize_evidence` 预先生成，本 Agent **只读校验，不得覆盖**）
+> **全自主**：7 步全跑完自动推进，除非 Step4 校验后 evidence_total < 10（真的没任何来源，说明项目太小/读失败）→ 记录+不阻塞。
 
 ---
 
@@ -22,7 +23,7 @@ GraphBuilder-Agent.run(
 1. **Normalize**（ID归一化 + dirty 标记）
 2. **Triplify**（4类显式 + 4类隐式传播规则）
 3. **Entity Alignment**（AI 调 EntityAligner-Agent，自主完成合并）
-4. **Evidence Aggregation**（按 4 种 source_type 聚合计信度 + cross_verified 判定）
+4. **Evidence Aggregation**（读取 `run.py normalize_evidence` 产物做 source_type 分组与 cross_verified 判定；**不重写** `_evidence.json`）
 5. **Snake Discovery**（4 类种子 + 扩展 + 顺序校正 + 回环检查，AI自主）
 6. **Confidence Propagation**（3轮迭代拉齐置信度，避免全是 low_confidence）
 7. **Quality Eval + 顺序落盘**（6层质量分算出 + 原子文件写 temp→rename）
@@ -74,13 +75,14 @@ GraphBuilder（Step2 后状态）：
 写文件顺序（必须严格递增，前面的 fsync 成功才写下一个）：
   1. graph/_nodes.json.tmp       → fsync → rename → _nodes.json
   2. graph/_triples.json.tmp     → fsync → rename → _triples.json
-  3. graph/_evidence.json.tmp    → fsync → rename → _evidence.json
-  4. graph/_snakes.json.tmp      → fsync → rename → _snakes.json
-  5. graph/_layer_index.json.tmp → fsync → rename → _layer_index.json
-  6. graph/_quality.json.tmp     → fsync → rename → _quality.json
-  7. graph/.graph_build_complete ← 最后写当前 timestamp（空文件也行，作为唯一"完成标记"）
+  3. graph/_snakes.json.tmp      → fsync → rename → _snakes.json
+  4. graph/_layer_index.json.tmp → fsync → rename → _layer_index.json
+  5. graph/_quality.json.tmp     → fsync → rename → _quality.json
+  6. graph/.graph_build_complete ← 最后写当前 timestamp（空文件也行，作为唯一"完成标记"）
+注意：`_evidence.json` 与 `_node_evidence.json` 已由 `run.py normalize_evidence` 预写，
+     本 Agent 只校验其存在且非空，**不得重写**（重写会丢 file_path/line_start）。
 写失败恢复：
-  - 任一步写失败：下次激活看到第7个完成标记文件不存在 → 从第1步重跑（节点三元组都是幂等的，重复生成不影响）
+  - 任一步写失败：下次激活看到第6个完成标记文件不存在 → 从第1步重跑（节点三元组都是幂等的，重复生成不影响）
   - 增量模式 dirty 节点：即使写一半，下一次也会重新被识别为 dirty（因为 .graph_build_complete 的时间比他们 updated_at 早）
 ```
 
@@ -88,7 +90,7 @@ GraphBuilder（Step2 后状态）：
 
 ## 四、图谱质量指标计算（作为 AUDIT & JUDGE 的输入）
 
-写完 6 个 JSON（_nodes/_triples/_evidence/_snakes/_layer_index/_quality）后最后写 `.graph_build_complete` 完成标记：
+写完 5 个 JSON（_nodes/_triples/_snakes/_layer_index/_quality；`_evidence` 由 normalize_evidence 预写）后最后写 `.graph_build_complete` 完成标记：
 
 ```json
 {

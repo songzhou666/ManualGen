@@ -1,7 +1,22 @@
 # Chunk 07: 六层骨架生长执行细则（Skeleton Growth）
 
-> **加载时机**：L0~L5每层开始时，只加载对应 §Lx 节，不加载整章。
+> **加载时机**：L0~L5每层开始时，加载「证据写法」节 + 对应 §Lx 节，不加载整章。
 > **执行Agent**：Skeleton-Agent (L0/L1)、NodeWeaver-Agent (L2~L5)
+
+---
+
+## 证据写法（L0~L3 统一铁律）
+
+各层 `evidence` / `frontend_evidence` / `backend_evidence` **只允许**以下两种形式：
+
+| 形式 | 示例 | 说明 |
+|---|---|---|
+| 代码证据 | `frontend/src/views/KnowledgeBase.vue:6-9` | **必须带起止行号**，路径相对项目根 |
+| 文档证据 | `README.md` | 文档类可省略行号，但路径必须存在 |
+
+禁止：`backend/api/x.py:get_hierarchy_view(...)`（冒号后写函数名）、裸文件名 `权限矩阵.json`、空字符串。
+错误写法会让 `run.py check_evidence` 直接 P0，且 `normalize_evidence` 无法生成图谱证据。
+**判据**：G1/G2/G3 出口必须 `run.py check_evidence` PASS。
 
 ---
 
@@ -183,6 +198,8 @@ core_module_ids 只用于决定批次先后顺序（先处理核心），**不�
 - [ ] 每个 PAGE 的 component_path 在项目中实际存在（Glob校验）
 - [ ] L1_index.json 非空，progress标记与L1_*.json 文件数量一致
 - [ ] `batches_done == batches_total`（批循环已覆盖全部模块）
+- [ ] **机器校验**：`'{"project_path":"<项目>"}' | python run.py verify` 输出 PASS（批次未跑完会直接 P0 阻断）
+- [ ] **机器校验**：`run.py check_evidence` 输出 PASS（证据路径可解析、代码证据带行号）
 
 ---
 
@@ -268,6 +285,7 @@ core_module_ids 只用于决定批次先后顺序（先处理核心），**不�
 - [ ] 有 visible_conditions 的区域都明确了条件来源（角色/数据/状态）
 - [ ] 每个 REGION 的 region_type 在规范枚举内（search_bar/data_table/detail_form/tab_panel/sidebar/action_bar/pager）
 - [ ] `batches_done == batches_total`（批循环已覆盖全部页面）
+- [ ] **机器校验**：`run.py verify` + `run.py check_evidence` 均输出 PASS
 
 ---
 
@@ -350,6 +368,7 @@ core_module_ids 只用于决定批次先后顺序（先处理核心），**不�
 - [ ] 每个 FUNCTION 都有 ≥ 1 条 evidence（前端或后端），cross_verified优先
 - [ ] 高风险操作 risk_level=high/critical 都有 requires_confirmation=true
 - [ ] `batches_done == batches_total`（批循环已覆盖全部区域）
+- [ ] **机器校验**：`run.py verify` + `run.py check_evidence` 均输出 PASS（每个 FUNCTION 至少 1 条带行号源码证据）
 
 ---
 
@@ -368,6 +387,10 @@ core_module_ids 只用于决定批次先后顺序（先处理核心），**不�
  "function_id": "FN_001",
  "function_name": "新增客户",
  "module_id": "MOD_001",
+ "region_id": "REG_010",
+ "operation_class": "core", // core=有表单/多步/分支的业务操作；micro=导航/开关/取消类单步操作
+ "atomic": false, // 仅 micro 可置 true，且必须写 atomic_reason；core 置 true 会被 check_depth 判 P0
+ "atomic_reason": null,
  "steps": [
  {
  "step_id": "STEP_00001",
@@ -419,17 +442,26 @@ core_module_ids 只用于决定批次先后顺序（先处理核心），**不�
  ],
  "flowchart_mermaid": "```mermaid\nflowchart TD\n S[开始: 进入客户列表页] --> A[检查权限]\n A -->|有权限| B[点击「新增客户」按钮]\n A -->|无权限| Z1[按钮不显示，结束]\n B --> C{弹窗是否打开?}\n C -->|是| D[填写姓名/手机/等级等必填项]\n C -->|否| Z2[系统繁忙，稍后重试]\n D --> E{字段校验通过?}\n E -->|是| F[点击「确认保存」]\n E -->|否| D1[按红字提示修正后重填]\n D1 --> E\n F --> G[二次确认弹窗点击「确定」]\n G --> H[系统处理 → 保存成功Toast]\n H --> Z[结束: 返回列表查看新记录]\n```",
  "branch_paths_count": 4, // 除了主路径外的分支数
- "evidence_refs": ["EVD_001", "EVD_002", "EVD_015"],
+ "evidence_refs": ["FN_001", "REG_010"], // L4 阶段写节点 ID；EVD 在 GRAPH_BUILD 后由 normalize_evidence 生成
  "auto_generated_from_graph": true
 }
 ```
 
+> **证据引用规则（v6.3.2）**：L4 发生时图谱尚未构建，EVD ID 不存在，因此 `evidence_refs`
+> 写**节点 ID**（本 FUNCTION / 所属 REGION），且这些节点必须已在 L1~L3 中带源码证据。
+> GRAPH_BUILD 阶段运行 `run.py normalize_evidence` 后，会自动为每个操作补 `evidence_ids`
+> （不覆盖作者字段）；AUDIT 的 `check_depth` 在图谱后模式下校验 EVD 是否真实存在。
+> **atomic 豁免**：只有 micro 操作可置 `atomic: true` 并写非空 `atomic_reason`（如「取消操作只有一步」），
+> 豁免「≥2 步 + 流程图」要求；core 操作不允许 atomic，防止用豁免掩盖缺失步骤。
+
 ### L4 闸门 G4 自检
-- [ ] **全部 FUNCTION** 的 steps.length ≥ 5（含前置条件 + 错误分支）
-- [ ] 每个 FUNCTION 的 flowchart_mermaid 为合法 Mermaid 代码（含 `flowchart` 关键字）
+- [ ] **core 操作** steps.length ≥ 5；**micro 操作**（导航/开关/取消类）steps.length ≥ 2；`atomic: true` 的 micro 操作可豁免（必须带 atomic_reason）
+- [ ] **core 操作** flowchart_mermaid 为合法 Mermaid 代码（含 `flowchart` 关键字）；micro 可省略；atomic 操作豁免
+- [ ] 每个操作的 `evidence_refs` 至少含 1 个**已存在的节点 ID**（本 FN 或所属 REG），且该节点在 L1~L3 有带行号源码证据
 - [ ] 有 ≥ 2 个 branch_paths（不是一条直线）
 - [ ] 每个 STEP 的 target_element_id 能在 L3_FUNCTION / ELEMENT 中找到（或合理为 precondition/feedback）
 - [ ] `batches_done == batches_total`（批循环已覆盖全部功能）
+- [ ] **机器校验**：`run.py verify` + `run.py check_depth`（预图谱模式）均输出 PASS
 
 ---
 
@@ -530,12 +562,45 @@ core_module_ids 只用于决定批次先后顺序（先处理核心），**不�
 }
 ```
 
+### 落盘文件 4：`L5_details/VALIDATION/校验规则.json`
+```json
+{
+ "generated_at": "2026-08-11T16:00:00+08:00",
+ "rules": [
+ { "rule_id": "VR_001", "entity_id": "ENT_001", "entity_name": "客户",
+ "field": "name", "rule_type": "required", "message": "客户姓名不能为空",
+ "trigger_function": "FN_001", "source": "frontend" },
+ { "rule_id": "VR_002", "entity_id": "ENT_001", "entity_name": "客户",
+ "field": "name", "rule_type": "pattern", "message": "2-50个中英文或数字",
+ "trigger_function": "FN_001", "source": "backend" }
+ ],
+ "rules_total": 50
+}
+```
+
+### 落盘文件 5：`L5_details/AGGREGATE/聚合统计.json`
+```json
+{
+ "generated_at": "2026-08-11T16:00:00+08:00",
+ "module_stats": [
+ { "module_id": "MOD_002", "module_name": "客户管理",
+ "pages": 3, "regions": 12, "functions": 18, "operations": 18, "fields": 42 }
+ ],
+ "totals": { "modules": 10, "pages": 24, "regions": 87, "functions": 95, "operations": 95, "fields": 180 }
+}
+```
+
+> 五类子目录（ENTITY/ROLE/ELEMENT/VALIDATION/AGGREGATE）**各有产物文件**才算 L5 完成；
+> `run.py verify` 按此口径判定，缺任一子目录即 P0 阻断。
+
 ### L5 闸门 G5 自检（与 SKILL.md 闸门表对齐）
 - [ ] **全部 ENTITY** 的字段 documented_fields / fields_total ≥ 80%（不允许只查核心实体）
 - [ ] 权限矩阵 coverage_percent ≥ 70%（覆盖全部 ROLE × FUNCTION 组合）
 - [ ] 高风险 FUNCTION 的按钮有 disabled 状态（有条件禁用）
 - [ ] ≥ 50 条 error_message（含错误场景 + 文案 + 触发FUNCTION）
+- [ ] 五类子目录均有产物：ENTITY / ROLE / ELEMENT / VALIDATION / AGGREGATE
 - [ ] `batches_done == batches_total`（批循环已覆盖全部操作/实体）
+- [ ] **机器校验**：`run.py verify` 输出 PASS
 
 ---
 

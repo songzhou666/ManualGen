@@ -255,9 +255,21 @@
 - 若 `_modules/` 不存在或为空 → INTEGRATE 直接阻断（说明 WRITE 未执行，回 WRITE 补跑）
 - 合并完成后必须运行机器校验（工作目录 manualgen_tools）：
   - `'{"project_path":"<项目>","manual_path":"<最终手册>"}' | python run.py scan_tech` → P0 命中数必须为 0
+    - 系统本身就是 Redis/MySQL 等管理工具时，用 `"allow_terms": ["Redis"]` 放行正常业务词（放行数会在输出中披露）
   - `'{"project_path":"<项目>"}' | python run.py coverage` → 无未覆盖模块
   - `'{"project_path":"<项目>"}' | python run.py verify` → 必须 PASS
   - 任一 FAIL → 不得交付，回对应阶段修复
+
+**5. 附录 B~F 必须生成（check_deliverables 硬性要求）**
+在 `output_user_manual/_appendix/` 下生成 5 个文件，缺任一 → `check_deliverables` FAIL，不得进入 AUDIT：
+
+| 文件 | 内容来源 |
+|---|---|
+| `appendix-B-permission-matrix.md` | `_kb/L5_details/ROLE/权限矩阵.json` 转表格 |
+| `appendix-C-AI-auto-decisions.md` | `_kb/_auto_decisions.md` |
+| `appendix-D-snake-flows.md` | `_kb/graph/_snakes.json` + 每条蛇的全景 Mermaid |
+| `appendix-E-evidence-index.md` | `_kb/graph/_evidence.json`（技术豁免区，含路径/行号） |
+| `appendix-F-uncalled-modules.md` | 全量模式写「无未覆盖模块」；核心优先模式逐条列 `skipped_modules` 及原因 |
 
 ### 执行内容
 - 模块内容完整内联

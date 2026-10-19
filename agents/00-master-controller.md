@@ -18,7 +18,7 @@ Step 0: 入口清单
  b. 读 existing baton（.agent/harness/_baton.json）
  c. 若 baton 不存在 → 初始化 START；meta.is_running=1（全流程托管，AI 自主，无 manual_mode 概念）
  d. 输出一行启动信息 + 状态（不输出大段解释）：
- 「ManualGen v6.3 已激活 | 项目: <project_root> | 当前阶段: START | 模式: 全流程托管（AI自主，无用户确认环节）」
+ 「ManualGen v6.3.3 已激活 | 项目: <project_root> | 当前阶段: START | 模式: 全流程托管（AI自主，无用户确认环节）」
  e. 立即 Step 1
 ```
 
@@ -26,13 +26,18 @@ Step 0: 入口清单
 ```
 a. 直接读 baton 恢复到 meta.state
 b. 若 meta.state ∈ L0~L5：
-   b1. 先校验已完成层：逐个验证 baton.layers[Lx].status 为 "completed" 或 "completed_with_pending"
-   b2. 每层必须满足 batches_done == batches_total（计数或字段均可）；不满足或 status 非法 → 回退该层重做（记入 rework.history）
+   b1. 先跑机器校验（唯一权威）：`'{"project_path": "<项目>"}' | python run.py verify`
+       - FAIL → 按 FAIL 清单回退补齐；不得"读 baton 里的 status 自认为已完成"
+   b2. 层完成由 verify 判定：`*_batches_total` 必须存在且 `*_batches_done == *_batches_total`；
+       不满足即 P0，回退该层未完成的批重做（记入 rework.history）
+   b2.1 若当前层 ≤ L3：再跑 `run.py check_evidence`（证据路径可解析、代码证据带行号、
+        每个 FUNCTION 有证据）；FAIL 先修证据再续跑
+   b2.2 所有计数以 `run.py baton_fix` 的磁盘反推为准（只写 completed，total 只读），禁止手填
    b3. 从 baton.layers[Lx].current_batch + 1 继续跑
 c. 若 baton.meta.sub_state=="BACKFILLING" → 从回灌断点继续
 d. 若 meta.state=AUTO_REVIEW 但 _auto_review_complete 标记存在 → 直接推进下一阶段（避免重复审）
 e. 若存在 baton.layers[Lx].status == "completed_with_pending" → 先走 GAP 强制回灌清单，不得直接 INTEGRATE
-f. 输出一行：「ManualGen v6.3 已从断点恢复 | 阶段: <meta.state> | 进度: <简要百分比>」
+f. 输出一行：「ManualGen v6.3.3 已从断点恢复 | 阶段: <meta.state> | 进度: <简要百分比>」
 ```
 
 ---
@@ -94,8 +99,10 @@ GAP_ANALYSIS 后：
  → 主控立即调 incremental_backfill(missing_scope: Chunk-09 §二)
  → 等回灌完成 → 恢复 Skeleton 当前批
  2.5 当前层完成判定（缺一不得推进）→ 更新 baton.meta.state = 下一层：
-   - 该层 batches_done == batches_total（计数或字段均可，只增不减）
-   - 该层 quality_score ≥ 层阈值（L0≥80, L1≥75, L2≥70, L3≥65, L4≥65, L5≥60）
+   - **`run.py verify` 输出 PASS**（批次完整性、产物存在性由脚本判定；AI 不得自行宣布完成）
+   - L1~L3 另需 **`run.py check_evidence` PASS**（证据路径可解析、代码证据带行号、FUNCTION 不缺证据）
+   - L4 另需 **`run.py check_depth` PASS**（预图谱模式：步数/流程图/节点引用/证据链）
+   - 该层 quality_score ≥ 层阈值（L0≥80, L1≥75, L2≥70, L3≥65, L4≥65, L5≥60）——AI 判定，但不得覆盖 verify 的 FAIL
    - 无异常批残留（如存在 incomplete_batches → status="completed_with_pending"，仍需在 GAP 阶段回灌后才可 INTEGRATE）
  2.6 卸载 chunk07 过期节（如已跑 L2，卸载 §L0 §L1）+ 触发全局 save_baton
 ```
@@ -124,15 +131,18 @@ meta.state = GRAPH_BUILD:
  3.2 判断模式：
  - 首次进入 baton.graph.graph_builds==0 → mode=FULL
  - baton.graph.graph_builds>0 & dirty 存在 → mode=INCREMENTAL
- 3.3 调 GraphBuilder-Agent.run(mode, dirty_node_ids, dirty_file_globs)
- → 内部 Step3 自动调 EntityAligner-Agent 做对齐
- 3.4 GraphBuilder 返回 graph_quality.json + flags
+ 3.3 先跑 `'{"project_path": "<项目>"}' | python run.py normalize_evidence`
+ → 生成 `graph/_evidence.json` + `graph/_node_evidence.json`，并给 L4 补 evidence_ids
+ → FAIL（路径不可解析/代码证据缺行号）→ 回 L0~L3 修证据后重跑，不得手写证据表
+ 3.4 调 GraphBuilder-Agent.run(mode, dirty_node_ids, dirty_file_globs)
+ → 内部 Step3 自动调 EntityAligner-Agent 做对齐；Step4 直接读 normalize 产物，不重复聚合
+ 3.5 GraphBuilder 返回 graph_quality.json + flags
  若 flags 含 HIGH_LOW_CONFIDENCE_RATE 且 baton.rework.graph_retries<2：
  → 把 suggest_backfill_scopes 记录下来，在 GAP 阶段用（不立即回灌）
  → baton.rework.graph_retries += 1
- 3.5 baton.graph.graph_builds += 1
- 3.6 卸载 chunk-08（节省上下文）
- 3.7 推进 GAP_ANALYSIS
+ 3.6 baton.graph.graph_builds += 1
+ 3.7 卸载 chunk-08（节省上下文）
+ 3.8 推进 GAP_ANALYSIS
 ```
 
 ---
@@ -174,8 +184,11 @@ meta.state = WRITE:
  - 每个子 Agent 只读取：自己模块的 graph 节点 + 相关 Snake（跨模块但被本模块节点引用的）
  - 上下文隔离（子 Agent 间互相看不到，避免互相干扰）
  - 输出：`output_user_manual/_modules/MOD_xxx.md`
- 5.5 所有模块写回后，主控检查每个模块文件存在且内容≥4KB（不允许空壳模块）
- → 不合格模块标记，交由 REFINE 后若仍不合格则 TODO_RESOLVE 阶段修
+ 5.5 所有模块写回后，主控按顺序跑机器校验（任一 FAIL 不得进 REFINE）：
+   - `run.py verify`（产物齐全、WRITE 模块文档存在）
+   - `run.py check_depth`（操作步数/流程图/证据引用/证据可解析）
+   - `run.py scan_tech`（模块文档 P0 技术泄漏必须为 0）
+   再由 AI 检查每个模块内容 ≥4KB（空壳模块识别，属软约束）
  5.6 推进 REFINE
 ```
 
@@ -198,6 +211,7 @@ meta.state = WRITE:
 
 ```
 JUDGE 盲审返回 per_module_scores 后：
+ 6.0 先跑 `run.py check_reports`：FAIL（报告空壳/无逐模块评分/修订覆盖不足）→ 回 AUDIT/REFINE 补报告，不进 JUDGE
  6.1 模块 score ≥70 → 写入 REFINE_PASS，不动
  6.2 模块 score <70 & rework.stage_retries["WRITE:MOD_xxx"] <3
  → 调用 chunk09 §三 局部重做算法
@@ -215,6 +229,9 @@ JUDGE 盲审返回 per_module_scores 后：
 
 | 异常 | 处理 |
 |------|------|
+| 某层声称完成但 `run.py verify` FAIL | 禁止推进。产物缺失→补产物；批次未跑完→回该层未完成批；`*_batches_total` 缺失→由父层节点数推导补齐（禁止填磁盘数） |
+| `run.py check_reports` FAIL | 报告是空壳：按 FAIL 项回 AUDIT（维度/⑪）、REFINE（模块覆盖）、GAP（分级）补内容；禁止只补一句结论 |
+| 图谱文件存在但 JSON 非法 | 判定写一半崩溃 → 回 GRAPH_BUILD 重跑原子落盘（先 normalize_evidence，再重写 5 个 JSON） |
 | 某层某批连续 3 次质量门不通过 | 写 warning + 记入 `baton.layers[Lx].incomplete_batches` → 后续 GAP 阶段**必须**回灌补全，不静默推进；回灌后仍不合格 → 该模块最终加警告标注 + 附录 C Top 清单 |
 | 层状态为 `completed_with_pending` | 该层存在未过质量门的批 → GAP 阶段强制回灌，回灌完成前禁止 INTEGRATE |
 | 同一 LAYER+MODULE 回灌 ≥3 次 | 判定"确实缺实现或读不到" → 模块最终加 → 不继续尝试 |
@@ -224,5 +241,5 @@ JUDGE 盲审返回 per_module_scores 后：
 
 ---
 
-**版本**: 6.3.0-agent00master
-**最后更新**: 2026-08-11
+**版本**: 6.3.3-agent00master
+**最后更新**: 2026-10-19

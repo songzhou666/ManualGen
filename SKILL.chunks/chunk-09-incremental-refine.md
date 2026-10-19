@@ -155,6 +155,30 @@ GAP 报告出来后不直接进 AUTO_REVIEW，AI 先做一次回灌必要性判�
 
 ---
 
+## 四之二、机器校验失败 → 返工映射（v6.3.2）
+
+`verify` / `check_evidence` / `check_depth` / `coverage` 报 FAIL 时，按下表定位返工层与动作，
+**不得靠改阈值、改 total、改脚本绕过**。
+
+| 失败项 | 根因层 | 返工动作 | 返工后复跑 |
+|---|---|---|---|
+| `check_evidence` 路径不可解析 | 证据来源层（L0~L3 中出问题的那层） | 重读该节点源码，把 `file_path` 改为相对项目根的真实路径 | check_evidence |
+| `check_evidence` 代码证据缺行号 | 同上 | 把 `path` 改成 `path:start-end`，行号必须来自实际源码 | check_evidence |
+| `check_evidence` 某 FUNCTION 无证据 | L3 | 回到该区域源码，为 FUNCTION 补 trigger_element 对应的代码行证据 | check_evidence |
+| `check_depth` 步骤不足（core） | L4 | 重织该操作：补前置条件、填写/确认、结果反馈、异常分支；仍不足则回 L3 查是否漏识别子功能 | check_depth |
+| `check_depth` 步骤不足（micro） | L4 | 要么补到 2 步，要么标 `atomic: true` + 真实理由（core 禁止） | check_depth |
+| `check_depth` core 无流程图 | L4 | 按 flowchart-spec 补 Mermaid（含至少 1 个分支） | check_depth |
+| `check_depth` 引用未知节点 / 与自身无关 | L4 | 把 `evidence_refs` 改为本 FUNCTION 或所属 REGION 的节点 ID | check_depth |
+| `check_depth` FUNCTION 无源码证据 | L3 | 回 L3 补该 FUNCTION 的 `frontend_evidence` / `backend_evidence`，再重跑下游 | check_evidence → check_depth |
+| `check_depth` EVD 悬空 / 图谱证据不可解析 | GRAPH_BUILD | 跑 `normalize_evidence`；若仍报 P0，回对应 L0~L3 修证据后重新归一化 | normalize_evidence → check_depth |
+| 批次未跑完 / `*_batches_total` 缺失 | 对应 L 层 | 回该层未完成批继续跑；total 由父层节点数推导补齐（禁止填磁盘数） | verify |
+| `coverage` 未覆盖模块 | WRITE / INTEGRATE | 补写该模块章节或列入附录 F；不得用短标题冒充 | coverage |
+
+**熔断**：同一 LAYER+MODULE 因同一失败项返工 ≥3 次 → 记 `_auto_decisions.md` + 附录 C，
+该模块最终加警告；禁止继续用同一手法重试。
+
+---
+
 ## 五、防止回灌死循环（熔断）
 
 ```

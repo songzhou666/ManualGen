@@ -82,7 +82,7 @@
 | L1_MODULE | `L1_INDEX.json` 记录的总批数全部完成（`batches_done==batches_total`）+ 每个 MODULE 都有 module_id |
 | L2_REGION | **全部页面** 每个 PAGE 至少 3 个 REGION（常见结构）全部落盘 + 批数完成率100% |
 | L3_FUNCTION | **全部区域** ≥90% FUNCTION 带 trigger_element + OPERATES_ON 三元组 + 批数完成率100% |
-| L4_OPERATION | **全部** FN ≥5 个 STEP + next_steps 完整 + 批数完成率100% |
+| L4_OPERATION | **全部** FN：core≥5 步 / micro≥2 步（atomic 需理由）+ next_steps 完整 + 批数完成率100% |
 | L5_DETAIL | **全部实体**字段覆盖率≥80%（100% 为目标，剩余部分必须显式列入附录F/附录C，禁止静默缺失）+ 权限矩阵覆盖≥70%（全部 ROLE×FUNCTION，未覆盖权限同理显式披露）+ 批数完成率100% |
 | GRAPH_BUILD | 6 个 JSON 都存在；nodes ≥ MODULE+PAGE+FN 总和；cross_verified_pct ≥50% |
 | GAP_ANALYSIS | `_gap_analysis.md` P0/P1/P2/P3 四级完整；回灌决策段已写 |

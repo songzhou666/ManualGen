@@ -78,7 +78,10 @@
 | **流程图完整性 ⚙** | **必须运行 `'{"project_path":"<项目>"}' \| python run.py scan_flowcharts`**，以脚本输出的 P0 命中数为准 | **scan_flowcharts 输出 FAIL（每模块 <1 张有效流程图 / 操作小节无图 / 全文 <3 张 / graph 旧语法 / 空图）→ 阻断，打回 WRITE 补图** |
 | **内容合规性 ⚙** | **必须运行 `'{"project_path":"<项目>","manual_path":"<手册>"}' \| python run.py scan_tech`**，以脚本输出的 P0 命中数为准 | **scan_tech 发现任何 P0 级技术泄漏（API端点/HTTP代码/数据库名/框架名/参数名/代码块）→ 阻断，打回 REFINE 重写** |
 | **覆盖完整性⑪ ⚙** | **必须运行 `'{"project_path":"<项目>"}' \| python run.py coverage`**，以脚本输出为准 | **coverage 输出任何未覆盖模块 → 阻断**（全量模式有模块缺失 / 核心优先模式无附录F → 阻断） |
-| **产物真实性 ⚙** | **必须运行 `'{"project_path":"<项目>"}' \| python run.py verify`** | **verify 输出 FAIL → 阻断，按 FAIL 清单回退补齐** |
+| **产物真实性 ⚙** | **必须运行 `'{"project_path":"<项目>"}' \| python run.py verify`** | **verify 输出 FAIL → 阻断，按 FAIL 清单回退补齐（含批次未跑完、total 缺失）** |
+| **操作深度与证据链 ⚙** | **必须运行 `'{"project_path":"<项目>"}' \| python run.py check_depth`** | **check_depth 输出 PASS 才算通过；步数不足（atomic 豁免除外）/ core 无图 / 节点或 EVD 引用缺失、悬空、与自身无关 / 证据不可解析 / 代码证据无行号 → 阻断，回对应层返工（映射见 chunk-09 §四之二）** |
+| **证据可用性抽样** | 随机抽 10 个操作，逐个打开其引用的证据，确认**代码行确实支撑该步骤**（check_depth 只验形状，不验语义） | 抽样中 ≥2 个证据与步骤无关 → 判定「证据挂靠」→ 回 L4 重织该批并记 `_auto_decisions.md` |
+| **报告非空壳 ⚙** | **必须运行 `'{"project_path":"<项目>"}' \| python run.py check_reports`**，以脚本输出为准 | **FAIL → 阻断**：AUDIT 维度不足 8 项/缺⑪、JUDGE 无逐模块评分行、REFINE 覆盖不足 80% 模块、GAP 缺 P0/P1/P2 分级、裁决日志过短 → 回对应阶段补报告 |
 | TODO占位内容 | 检查是否有未解决的TODO:PLACEHOLDER标记 | 发现未解决的PLACEHOLDER → 阻断（TODO_RESOLVE阶段处理后仍存在的才阻断） |
 | 状态图合规 | 检查stateDiagram-v2格式 | 状态图非Mermaid格式 → 阻断 |
 | 模板块数验证 | 验证声称数vs实际列数 | 声称N个但列出M个(M<N) → 阻断 |

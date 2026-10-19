@@ -1,3 +1,98 @@
+# ManualGen v6.3.3 版本更新说明
+
+**版本**: 6.3.3
+**发布日期**: 2026-10-19
+**类型**: 异常路径加固（正常流程之外，补崩溃/空壳/误报/并发四类场景）
+**兼容**: v6.x
+
+---
+
+## 更新摘要
+
+v6.3.2 走通了正常流程，但异常路径没有演练。本轮按执行者视角逐项演练，补了四处：
+
+- **空壳报告拦截**：新增 `run.py check_reports`。实测 `E:\test_agent` 的 `_judgment.md` 917B、
+  `_refine_log.md` 699B 只写结论，却判 DONE 并给 97 分。新检查按 L1 模块数核对：
+  AUDIT 至少 8 个维度 + ⑪；JUDGE 逐模块评分行 ≥80% 模块；REFINE 覆盖 ≥80% 模块；
+  GAP 含 P0/P1/P2；裁决日志 ≥200 字节且有依据。AUDIT/JUDGE 前必跑。
+- **崩溃恢复**：`verify` 对 graph 6 文件增加 JSON 合法性校验。文件存在但内容截断（写一半崩溃）
+  现在会 P0 阻断并提示回 GRAPH_BUILD 重写。
+- **误报治理**：`scan_tech` 新增 `allow_terms` 业务白名单（如系统本身就是 Redis 管理工具时放行
+  "Redis"），并在输出中披露放行数量；附录 E 豁免区兼容 `## 附录 E` / `## 附录E` / `## Appendix E`。
+- **环境自检**：`ping` 增加 Python ≥3.8 校验。
+- **并发禁令**：明确同一项目禁止两个 ManualGen 实例同时运行（`_baton.json`/`_kb/` 无跨进程锁），
+  激活时 `is_running==1` 且 30 分钟内更新过需先确认。
+- **测试**：22 → 23 条，新增空壳报告用例，并把 `check_reports` 纳入端到端链路。
+
+---
+
+# ManualGen v6.3.2 版本更新说明
+
+**版本**: 6.3.2
+**发布日期**: 2026-10-19
+**类型**: 证据链闭环（从「能检查」到「能追溯、能返工」）
+**兼容**: v6.x
+
+---
+
+## 更新摘要
+
+v6.3.1 补上了检查，但检查失败后没有返工路径；同时 L4 要求引用 EVD，而 EVD 要到 GRAPH_BUILD 才生成——
+这是流程顺序上的自相矛盾。实测 `E:\test_agent` 的 L1~L3 源码证据其实**带行号**（521 条中仅 3 条缺行号），
+但 GRAPH_BUILD 把它们压成了 `line_start: null`，导致最终「证据 0 条带行号」。本版从流程到落点补齐：
+
+- **证据要求前置**：新增 `run.py check_evidence`，在 G1/G2/G3 出口校验证据路径可解析、
+  代码证据带行号、每个 FUNCTION 至少 1 条证据。早失败，返工只影响当前层。
+- **证据归一化机器化**：新增 `run.py normalize_evidence`，从 L0~L3 的 `path:start-end`
+  字符串确定性解析出 `file_path` / `line_start` / `line_end`，按来源去重合并，生成
+  `graph/_evidence.json` + `graph/_node_evidence.json`（node→EVD 索引），并给 L4 补
+  `evidence_ids`。禁止 AI 手写证据表，避免再次丢行号。
+- **修正 L4 引用口径**：L4 阶段 EVD 尚不存在，`evidence_refs` 改为写节点 ID（本 FN / 所属 REG）；
+  AUDIT 阶段 check_depth 切到图谱后模式校验 EVD。两种模式自动切换。
+- **atomic 豁免**：micro 操作可标 `atomic: true` + `atomic_reason` 豁免步数/流程图要求，
+  core 操作禁止 atomic，避免为了过检硬凑步骤。
+- **返工映射**：chunk-09 新增「机器校验失败 → 返工层 → 复跑项」表，覆盖 11 类失败；
+  同一模块同一失败返工 ≥3 次触发熔断。
+- **AUDIT 语义抽样**：check_depth 只验形状，新增随机抽 10 个操作核对证据是否真的支撑步骤，
+  ≥2 个不相关判「证据挂靠」并回 L4 重织。
+- **测试**：回归用例 11 → 21，覆盖证据校验、归一化、双模式 check_depth、atomic 规则。
+
+---
+
+# ManualGen v6.3.1 版本更新说明
+
+**版本**: 6.3.1
+**发布日期**: 2026-10-19
+**类型**: 闸门接线修复（根治「硬校验存在但没接到执行路径」）
+**兼容**: v6.x
+
+---
+
+## 更新摘要
+
+v6.3 建好了 CLI，但执行路径没有强制调用它。实测 `E:\test_agent`（v6.3，2026-08-12）暴露：
+baton 里 L4 `functions_batches_done=0 / total=30` 仍标 completed；119 个操作中 99 个不足 5 步、
+证据 0 条带行号、119 个操作 0 条引用 EVD；AUDIT 仍给出 97 分。根因是「可机器判定的事」只写进了
+SKILL.md，没有写进主控与分层细则，也没有对应的检查代码。本版补齐：
+
+- **verify 增批次一致性**：`*_batches_total` 必须存在且 `*_batches_done == *_batches_total`，
+  否则 P0 阻断。这条正是 v6.2「AI 自报 38 批」失败模式的入口。
+- **baton_fix 只写 completed**：不再把 `*_total` / `*_total_expected` 覆盖成磁盘数（旧实现会把
+  10 个模块的计划量改成 2，让完成判据恒真）；total 缺失时返回 P0，要求由父层推导补齐。
+- **coverage 收紧**：标题先归一化（去序号/装饰符），只保留「模块名 ⊂ 标题」方向，堵住
+  「标题『客户』冒充模块『客户管理』」的假 PASS。
+- **新增 `check_depth`**：core 操作 ≥5 步、micro 操作 ≥2 步；core 必须有非空 Mermaid；
+  每个操作必须引用存在的 `EVD_*`；证据 file_path 可解析率 ≥80%；代码类证据带行号比例 ≥50%。
+- **契约对齐**：`chunk-07` 补齐 L5 第 4/5 类产物（VALIDATION、AGGREGATE）的落盘定义，
+  与 `verify` 的五类子目录口径一致（旧文档只写 3 类，照做必被 verify 判 FAIL）。
+- **执行路径接线**：主控 Agent 的断点恢复、层完成判定、WRITE 出口均改为先跑
+  `verify` / `check_depth` / `scan_tech`，删除「读 baton.status 即算校验」的旧表述；
+  chunk-07 的 G1~G5 自检各加机器校验项。
+- **回归测试**：新增 `tests/test_run.py`（11 用例），覆盖批次未跑完、total 只读、覆盖误判、
+  四类深度缺陷，`python -m unittest discover -s tests -v` 全绿。
+
+---
+
 # ManualGen v6.3.0 版本更新说明
 
 **版本**: 6.3.0

@@ -1,6 +1,15 @@
 # ManualGen 阶段执行规范 v6
 
 > 每个阶段必须通过检查点才能进入下一阶段。本文件是阶段执行的**唯一详细来源**（SKILL.md只列总览，不重复描述）。
+>
+> **v6.3.2 机器优先**：下表检查点中，凡是能由脚本判定的一律先跑 `manualgen_tools/run.py`，AI 不得自述：
+> - L1/L2/L3：`verify` + `check_evidence`
+> - L4：`verify` + `check_depth`（预图谱模式）
+> - GRAPH_BUILD：`normalize_evidence`（生成 `_evidence.json` + `_node_evidence.json`）
+> - WRITE 后：`verify` + `check_depth` + `scan_tech`
+> - AUDIT：`verify` / `scan_tech` / `scan_flowcharts` / `coverage` / `check_depth`
+>
+> 调用：`'{"project_path":"<项目>"}' | python run.py <action>`（工作目录 `manualgen_tools/`）。退出码 1 = 阻断，AI 无权豁免。
 > v6 变化：13阶段 → 18阶段，废弃CONFIRM，新增六层 + GRAPH + AUTO_REVIEW，全流程AI自主。
 
 ---
@@ -11,12 +20,12 @@
 |---|------|--------|---------|----------------|------------------|
 | 0 | START | 主控 | 无 | baton(START) | project_root 存在 |
 | 1 | L0_SKELETON | Skeleton + NodeWeaver | baton | `_kb/L0_skeleton.json` | modules + roles 都≥1，data_creation_chain 给出 |
-| 2 | L1_MODULE | Skeleton + NodeWeaver | L0_skeleton | `_kb/L1_modules/*.json` + `L1_INDEX.json` | 批数完成率 100%（`batches_done==batches_total`），每页都有 module_id |
-| 3 | L2_REGION | Skeleton + NodeWeaver | L1_INDEX | `_kb/L2_regions/*.json` | **全部页面**每PAGE至少3个REGION（含分页/操作栏/表格区常见）+ 批数完成率100% |
-| 4 | L3_FUNCTION | Skeleton + NodeWeaver | L2 regions | `_kb/L3_functions/*.json` | **全部区域 100% 覆盖**（批循环，`batches_done==batches_total`）+ 已识别 FUNCTION ≥90% 带 trigger_element + OPERATES_ON |
-| 5 | L4_OPERATION | Skeleton + NodeWeaver | L3 functions | `_kb/L4_operations/*.json` | **全部** FN 拆≥5个 STEP，STEP next_steps 完整 + 批数完成率100% |
-| 6 | L5_DETAIL | Skeleton + NodeWeaver | L4 operations | `_kb/L5_details/{ENTITY,ROLE,ELEMENT,VALIDATION,AGGREGATE}/*.json` | **全部 ENTITY** fields ≥ 5 且 validation ≥ 2 条每模块 + 批数完成率100% |
-| 7 | GRAPH_BUILD | GraphBuilder + EntityAligner | 六层 | `graph/_nodes/_triples/_evidence/_snakes/_layer_index/_quality.json` （6个全） | 6个JSON都存在 + nodes ≥ MODULE数+PAGE数+FN数 |
+| 2 | L1_MODULE | Skeleton + NodeWeaver | L0_skeleton | `_kb/L1_modules/*.json` + `L1_INDEX.json` | ⚙ verify + check_evidence PASS；批数完成率 100%，每页都有 module_id |
+| 3 | L2_REGION | Skeleton + NodeWeaver | L1_INDEX | `_kb/L2_regions/*.json` | ⚙ verify + check_evidence PASS；**全部页面**每PAGE至少3个REGION + 批数完成率100% |
+| 4 | L3_FUNCTION | Skeleton + NodeWeaver | L2 regions | `_kb/L3_functions/*.json` | ⚙ verify + check_evidence PASS；**全部区域 100% 覆盖** + FUNCTION ≥90% 带 trigger_element + OPERATES_ON |
+| 5 | L4_OPERATION | Skeleton + NodeWeaver | L3 functions | `_kb/L4_operations/*.json` | ⚙ verify + check_depth（预图谱）PASS；core≥5 步 / micro≥2 步（atomic 需理由），STEP next_steps 完整 |
+| 6 | L5_DETAIL | Skeleton + NodeWeaver | L4 operations | `_kb/L5_details/{ENTITY,ROLE,ELEMENT,VALIDATION,AGGREGATE}/*.json` | ⚙ verify PASS（五类子目录均有产物）；**全部 ENTITY** fields ≥ 5 且 validation ≥ 2 条每模块 + 批数完成率100% |
+| 7 | GRAPH_BUILD | GraphBuilder + EntityAligner | 六层 | `graph/_nodes/_triples/_evidence/_snakes/_layer_index/_quality.json` + `_node_evidence.json` | ⚙ normalize_evidence PASS；6个JSON都存在 + nodes ≥ MODULE数+PAGE数+FN数 |
 | 8 | GAP_ANALYSIS | 主控（含可选回灌） | graph_quality.json | `_gap_analysis.md` + `_auto_decisions.md` 回灌决策段 | 缺口分级完整（P0/P1/P2/P3都写） |
 | 9 | AUTO_REVIEW | 主控 AI 自审 | gap_analysis.md + graph | `_auto_decisions.md` 低置信裁决段 | low_confidence_nodes 占比 ≤ 15% 或已被AI处理 |
 | 10 | RESOLVE | Resolver v6 | auto_review + graph | `_resolution.md` + 各 resolution 写回 graph | HIGH 冲突 100% 有决策（不论保守解或标记） |
@@ -24,9 +33,9 @@
 | 12 | REFINE | 主控（调度 Refiner 子Agent） | `output_user_manual/_modules/*.md` | `_refine_log.md` | 各模块 REFINE 清单 ≥8/10（不合格自主修复后达标） |
 | 13 | REFERENCE_CHECK | 主控 Graph 反向查询 | modules + triples | `_reference_check.md` | 术语一致率 & 引用有效率 ≥ 95% |
 | 14 | INTEGRATE | Integrator v6 | `output_user_manual/_modules/` + graph + snakes | `output_user_manual/_appendix/B~F.md` + `{项目名称} 用户操作手册.md` + `_integration.md` | 主手册不含 _modules 外链；**5 大附录 B/C/D/E/F 都产出**（附录F=未覆盖清单） |
-| 15 | AUDIT | 主控（10维评分 + 第⑪维覆盖完整性硬门） | _integration.md + graph_quality | `_audit.md` + _audit-summary.md | 10 维 ≥ 60 **+ 第⑪维覆盖完整性硬性 PASS/FAIL**（L1_index 全模块 vs 手册章节逐一比对，未覆盖必须溯源到附录 F；不 PASS → 回退 GAP_ANALYSIS 补齐） |
+| 15 | AUDIT | 主控（10维评分 + 第⑪维覆盖完整性硬门） | _integration.md + graph_quality | `_audit.md` + _audit-summary.md | ⚙ verify/scan_tech/scan_flowcharts/coverage/check_depth/check_reports PASS；10 维 ≥ 60 **+ 第⑪维覆盖完整性硬性 PASS/FAIL**（L1_index 全模块 vs 手册章节逐一比对，未覆盖必须溯源到附录 F；不 PASS → 回退 GAP_ANALYSIS 补齐） |
 | 16 | TODO_RESOLVE | 主控 AI 逐条解决 | audit.md | `_todo_resolution.md` + updated todo_list | P0 TODO 100% RESOLVED 或 BLOCKER 评估完成 |
-| 17 | JUDGE | 子 Agent 盲审（模块级打回） | _judgment.md | `_judgment.md`（含 per_module_scores） | ≥70%模块 PASS；不合格且≤2次重试返回 WRITE；≥3次 DONE+ |
+| 17 | JUDGE | 子 Agent 盲审（模块级打回） | _judgment.md | `_judgment.md`（含 per_module_scores） | ⚙ check_reports PASS（逐模块评分行 ≥80% 模块）；≥70%模块 PASS；不合格且≤2次重试返回 WRITE；≥3次 DONE+ |
 | 18 | DONE | 主控 | judgment PASS | 最终交付物（项目根） + 最终报告 | 最终文件存在于项目根；无未标记 BLOCKER |
 
 ---

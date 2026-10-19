@@ -91,6 +91,13 @@ MODULE.entities[].entity_id → MANAGES → ENTITY
 
 ## Step 4: 证据聚合（Evidence Aggregation）
 
+> **v6.3.2 起这一步由脚本执行，禁止 AI 手写证据表**：
+> `'{"project_path":"<项目>"}' | python run.py normalize_evidence`
+> 它从 L0~L3 的 `path:start-end` 字符串确定性解析出 `file_path` / `line_start` / `line_end`，
+> 按来源去重合并，生成 `graph/_evidence.json` + `graph/_node_evidence.json`（node→EVD 索引），
+> 并给 L4 操作补 `evidence_ids`。先跑脚本，再做下面的置信度计算。
+> 脚本报 P0（路径不可解析 / 代码证据缺行号）→ 回 L0~L3 修证据，不得手改 `_evidence.json`。
+
 ### 规则
 每个NODE：
 1. 收集所有引用它的EVIDENCE（各Lx节点的evidence字段合并）
@@ -105,6 +112,7 @@ MODULE.entities[].entity_id → MANAGES → ENTITY
 
 ### 输出
 `graph/_evidence.json`（含反向索引：evidence_id → supporting_node_ids[]）
+`graph/_node_evidence.json`（node_id → [evidence_id]，供 L4/AUDIT 追溯；由 normalize_evidence 生成）
 
 ---
 
